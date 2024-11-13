@@ -37,11 +37,11 @@ def detect_aruco_markers(frame):
     
     # Detect markers
     detector = aruco.ArucoDetector(aruco_dict, parameters)
-    corners, ids, rejected = detector.detectMarkers(gray)
+    corners, ids, _ = detector.detectMarkers(gray)
     
     return corners, ids
 
-def draw_markers_with_names(frame, corners, ids):
+def draw_markers(frame, corners, ids):
     """Draw detected markers with their corner names on the frame."""
     if ids is not None:
         # Draw the detected markers
@@ -104,7 +104,7 @@ def main():
             corners, ids = detect_aruco_markers(frame)
             
             # Draw markers with corner names
-            frame = draw_markers_with_names(frame, corners, ids)
+            frame = draw_markers(frame, corners, ids)
             
             # Display the frame
             cv2.imshow('ArUco Corner Detection', frame)
