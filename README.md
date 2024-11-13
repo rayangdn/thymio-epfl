@@ -13,6 +13,9 @@ conda activate myenv
 
 # Install using:
 conda install --file requirements.txt
+
+# Or
+pip install -r requirements.txt
 ```
 
 ## Useful Commands
@@ -22,4 +25,7 @@ conda deactivate       # Exit environment
 conda env remove --name myenv  # Delete environment
 ```
 
-That's it! You're ready to start working.
+## ARUCO OPENCV DOCU
+https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
+## CALIBRATION OPENCV DOCU
+https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html
