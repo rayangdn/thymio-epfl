@@ -1,18 +1,14 @@
 import numpy as np
 import cv2
-import glob
+import os
 
-def calibrate_camera(checkerboard_size=(7,10), square_size=0.015):  # Modified for your pattern
-    """
-    Calibrate camera using a checkerboard pattern
-    
-    Args:
-        checkerboard_size: Number of inner corners (width, height) - (7,10) for an 8x11 checkerboard
-        square_size: Size of a square in meters (0.015 = 15mm)
-    Returns:
-        camera_matrix: The camera matrix
-        dist_coeffs: Distortion coefficients
-    """
+def calibrate_camera(checkerboard_size=(7,10), square_size=0.015): 
+    # Create save directories
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    save_dir = os.path.join(parent_dir, 'img', 'calibration')
+    os.makedirs(save_dir, exist_ok=True)
+
     # Prepare object points
     objp = np.zeros((checkerboard_size[0] * checkerboard_size[1], 3), np.float32)
     objp[:,:2] = np.mgrid[0:checkerboard_size[0], 0:checkerboard_size[1]].T.reshape(-1,2)
@@ -22,9 +18,9 @@ def calibrate_camera(checkerboard_size=(7,10), square_size=0.015):  # Modified f
     obj_points = []  # 3D points in real world space
     img_points = []  # 2D points in image plane
     
-    cap = cv2.VideoCapture(2)  # Use default camera
+    cap = cv2.VideoCapture(2)  
     
-    # Set resolution to 1080p for your Aukey webcam
+    # Set resolution to 1080p 
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     
@@ -59,13 +55,17 @@ def calibrate_camera(checkerboard_size=(7,10), square_size=0.015):  # Modified f
             # Draw the corners
             cv2.drawChessboardCorners(display_frame, checkerboard_size, corners2, ret)
             
-            # On spacebar press, save the points
+            # On spacebar press, save the points and the image
             key = cv2.waitKey(1) & 0xFF
             if key == ord(' '):
                 obj_points.append(objp)
                 img_points.append(corners2)
                 found_count += 1
-                print(f"Captured {found_count}/{required_count}")
+                
+                # Save the image
+                img_filename = os.path.join(save_dir, f'calibration_img_{found_count:02d}.png')
+                cv2.imwrite(img_filename, frame)
+                print(f"Captured {found_count}/{required_count} - Saved as {img_filename}")
         
         # Show info on frame
         cv2.putText(display_frame, f"Captured: {found_count}/{required_count}", (50,50),
@@ -102,16 +102,55 @@ def calibrate_camera(checkerboard_size=(7,10), square_size=0.015):  # Modified f
     print(camera_matrix)
     print("\nDistortion Coefficients:")
     print(dist_coeffs)
+
+    # Capture and save comparison images
+    print("\nCapturing comparison images...")
+    cap = cv2.VideoCapture(2)  # Reopen the camera
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Failed to grab frame")
+            break
+
+        # Create undistorted version of the frame
+        h, w = frame.shape[:2]
+        newcameramtx, _ = cv2.getOptimalNewCameraMatrix(camera_matrix, dist_coeffs, (w,h), 1, (w,h))
+        undistorted = cv2.undistort(frame, camera_matrix, dist_coeffs, None, newcameramtx)
+
+        # Display both frames
+        cv2.imshow('Original', frame)
+        cv2.imshow('Calibrated', undistorted)
+        cv2.putText(frame, "Press 'S' to save both images, 'Q' to quit", (50,50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
+
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('s'):
+            # Save both images
+            original_path = os.path.join(save_dir, 'original_comparison.png')
+            calibrated_path = os.path.join(save_dir, 'calibrated_comparison.png')
+            
+            cv2.imwrite(original_path, frame)
+            cv2.imwrite(calibrated_path, undistorted)
+            print(f"Saved comparison images:")
+            print(f"Original: {original_path}")
+            print(f"Calibrated: {calibrated_path}")
+            break
+        elif key == ord('q'):
+            break
+
+    cv2.destroyAllWindows()
+    cap.release()
     
     return camera_matrix, dist_coeffs
 
 def save_calibration(camera_matrix, dist_coeffs, filename="camera_calibration.npz"):
-    """Save calibration parameters to a file"""
     np.savez(filename, camera_matrix=camera_matrix, dist_coeffs=dist_coeffs)
     print(f"Calibration saved to {filename}")
 
 def load_calibration(filename="camera_calibration.npz"):
-    """Load calibration parameters from a file"""
     data = np.load(filename)
     return data['camera_matrix'], data['dist_coeffs']
 
