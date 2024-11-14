@@ -1,7 +1,7 @@
 import os
 import yaml
-import cv2
 import numpy as np
+import cv2
 import cv2.aruco as aruco
 
 class Vision:
@@ -9,8 +9,8 @@ class Vision:
     CORNER_MAPPING = {
         0: "bottom_left",
         1: "bottom_right",
-        2: "top_right",
-        3: "top_left",
+        2: "top_left",
+        3: "top_right",
         4: "tyhmio",
         5: "goal"
     }
