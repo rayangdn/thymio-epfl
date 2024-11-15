@@ -7,12 +7,12 @@ import cv2.aruco as aruco
 class Vision:
     # Class-level constant for corner mapping
     MAPPING = {
-        0: ("bottom_left", 3),
-        1: ("bottom_right", 2),
-        2: ("top_left", 0),
-        3: ("top_right", 1),
-        4: ("thymio", None),
-        5: ("goal", None)
+        0: "bottom_left",
+        1: "bottom_right",
+        2: "top_left",
+        3: "top_right",
+        4: "thymio",
+        5: "goal"
     }
 
     def __init__(self):
@@ -83,11 +83,11 @@ class Vision:
             center = np.mean(c, axis=0).astype(int)
 
             # Get name from mapping, or use ID if not mapped
-            name, index = self.MAPPING.get(marker_id, (f"Unknown ID: {marker_id}", None))
+            name = self.MAPPING.get(marker_id, f"Unknown ID: {marker_id}")
             
-            # define coordinates of the world
-            if index is not None:
-                coordinates.append(corners[i][0][index].astype(int))
+            # define coordinates of the world with corners
+            if (i <=  3) and (0 in ids) and (1 in ids) and (2 in ids) and (3 in ids):
+                coordinates.append(corners[i][0][0].astype(int))
 
             # Draw background rectangle for better text visibility
             text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
@@ -169,7 +169,6 @@ class Vision:
             # Generate 2D map
             if dimensions is not None:
                 map_view = self.get_2d_map(frame, dimensions)
-                print("Map view generated")
             return frame_with_markers, map_view
         
         return None, None
