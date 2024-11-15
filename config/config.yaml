@@ -1,8 +1,9 @@
 # Configuration file for the thymio n
 
 # Configuration for the world
-width: 21
-height: 12
+world:
+  width: 21
+  height: 12
 
 # Configuration for the webcam
 webcam:

@@ -3,19 +3,64 @@ import yaml
 import numpy as np
 import cv2
 import cv2.aruco as aruco
+import matplotlib.pyplot as plt
 
-class Vision:
-    # Class-level constant for corner mapping
-    MAPPING = {
-        0: ("bottom_left", 3),
-        1: ("bottom_right", 2),
-        2: ("top_left", 0),
-        3: ("top_right", 1),
-        4: ("thymio", None),
-        5: ("goal", None)
-    }
-
+class Interface:
     def __init__(self):
+        plt.ion()
+        self.fig = plt.figure(figsize=(20, 10))
+        gs = self.fig.add_gridspec(2, 2)
+        gs.update(left=0.01, right=0.99, bottom=0.05, top=0.95, wspace=0.02, hspace=0.15)
+        
+        self.ax1 = self.fig.add_subplot(gs[0, 0])
+        self.ax2 = self.fig.add_subplot(gs[0, 1])
+        self.ax3 = self.fig.add_subplot(gs[1, 0])
+        self.ax4 = self.fig.add_subplot(gs[1, 1])
+        
+        self.fig.canvas.manager.set_window_title('Vision Interface')
+        
+        self.plots = [None] * 4
+
+    def update_display(self, original_frame, process_frame):
+        frames = [original_frame, process_frame, original_frame, original_frame]
+        titles = ['Webcam View', 'Processing View', 'Processing View', 'Result View']
+        axes = [self.ax1, self.ax2, self.ax3, self.ax4]
+        
+        for i, (frame, title, ax) in enumerate(zip(frames, titles, axes)):
+            if frame is None:
+                continue
+            if self.plots[i] is None:
+                self.plots[i] = ax.imshow(frame)
+                ax.set_title(title, fontsize=12, pad=10)
+                ax.axis('off')
+            else:
+                self.plots[i].set_data(frame)
+        
+        plt.draw()
+        plt.pause(0.001)
+
+    def is_window_open(self):
+        return bool(plt.get_fignums())
+
+    def cleanup(self):
+        plt.close('all')
+        
+class Vision:
+    
+    # Class-level constant for corner mapping
+    # USe order bf, tl, tr, br
+    MAPPING = {
+        0: "bottom_left",
+        1: "bottom_right",
+        2: "top_left",
+        3: "top_right",
+        4: "thymio",
+        5: "goal"
+    }
+    
+    def __init__(self):
+        print("Initializing Vision")
+        
         # Load config
         current_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(current_dir)             
@@ -23,72 +68,87 @@ class Vision:
         
         with open(config_path, 'r') as file:
             self.config = yaml.safe_load(file)
-        
+            
         # Initialize camera
         self.cap = None
         self.device_id = self.config['webcam']['device_id']
         self.camera_matrix = np.array(self.config['webcam']['matrix'])
         self.dist_coeffs = np.array(self.config['webcam']['distortion'])
         self.resolution = self.config['webcam']['resolution']
-
-        #Initialize World
-        self.world_width = self.config['width']
-        self.world_height = self.config['height']
-        self.scale = self.resolution[1] / self.world_width
-
+        
         # Perspective transform matrix
         self.perspective_matrix = None
+        
+        # Initialize World
+        self.world_width = self.config['world']['width']
+        self.world_height = self.config['world']['height']
         
         # Initialize ArUco detector
         self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
         self.parameters = aruco.DetectorParameters()
         self.detector = aruco.ArucoDetector(self.aruco_dict, self.parameters)
+        
+        # Initalize interface
+        self.interface = Interface()
 
     def connect_webcam(self):
         self.cap = cv2.VideoCapture(self.device_id)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.resolution[0])
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.resolution[1])
-        
+
         if not self.cap.isOpened():
             print("Error: Could not open camera.")
             return False
         return True
     
-    def undistort_frame(self, frame):
-        h, w = frame.shape[:2]
-        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(
-            self.camera_matrix, self.dist_coeffs, (w,h), 1, (w,h))
-        undistorted = cv2.undistort(frame, self.camera_matrix, 
-                                    self.dist_coeffs, None, newcameramtx)
-        x, y, w, h = roi
+    def cleanup_webcam(self):
+        if self.cap is not None:
+            self.cap.release()
+        self.interface.cleanup()
         
-        return undistorted[y:y+h, x:x+w]
-
-    def detect_aruco_markers(self, frame):
+    def process_aruco_markers(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = self.detector.detectMarkers(gray)
-        return corners, ids
-
-    def draw_markers(self, frame, corners, ids):
-        if ids is None:
-            return frame, None
         
-        coordinates = []
-        # Draw the detected markers
+        # Create dictionaries to store corner, thymio and goal positions
+        corner_positions = {
+            "bottom_left": None, 
+            "bottom_right": None,
+            "top_left": None,
+            "top_right": None
+        }
+        thymio_goal_positions = {
+            "thymio": None,
+            "goal": None
+        }
+        
+        found_corners = False
+        found_thymio_goal = False
+        
+        if ids is None:
+            return frame, corner_positions, thymio_goal_positions, found_corners, found_thymio_goal
+        
+        # Draw markers
         frame = aruco.drawDetectedMarkers(frame, corners, ids)
         
         for i in range(len(ids)):
             marker_id = ids[i][0]
             c = corners[i][0]
-            center = np.mean(c, axis=0).astype(int)
-
-            # Get name from mapping, or use ID if not mapped
-            name, index = self.MAPPING.get(marker_id, (f"Unknown ID: {marker_id}", None))
             
-            # define coordinates of the world
-            if index is not None:
-                coordinates.append(corners[i][0][index].astype(int))
-
+            # Get center of marker
+            center = np.mean(c, axis=0).astype(int)
+            
+            # Get name from mapping
+            name = self.MAPPING[marker_id]
+            
+            # Store corner positions
+            if marker_id in [0, 1, 2, 3]:
+                corner_positions[name] = (int(c[0][0]), int(c[0][1])) 
+            
+            # Store thymio and goal positions
+            if marker_id in [4, 5]:
+                thymio_goal_positions[name] = (int(center[0][0]), int(center[0][1]))
+            
             # Draw background rectangle for better text visibility
             text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
             cv2.rectangle(frame, 
@@ -96,30 +156,45 @@ class Vision:
                         (center[0] + text_size[0] + 5, center[1] + 5),
                         (0, 0, 0), -1)
             
-            # Draw corner name
+            # Draw marker name 
             cv2.putText(frame, name, 
                         (center[0], center[1]),
                         cv2.FONT_HERSHEY_SIMPLEX, 
                         0.5, (0, 0, 255), 2)
             
-        # Draw world border
-        if(len(coordinates) == 4):
-            cv2.line(frame, (coordinates[0][0], coordinates[0][1]), (coordinates[1][0], coordinates[1][1]), (0, 255, 255), 2)
-            cv2.line(frame, (coordinates[1][0], coordinates[1][1]), (coordinates[3][0], coordinates[3][1]), (0, 255, 255), 2)
-            cv2.line(frame, (coordinates[2][0], coordinates[2][1]), (coordinates[3][0], coordinates[3][1]), (0, 255, 255), 2)
-            cv2.line(frame, (coordinates[2][0], coordinates[2][1]), (coordinates[0][0], coordinates[0][1]), (0, 255, 255), 2)
-        else :
-            coordinates = None
-        # return frame and the world border coordinates
-        return frame, coordinates
+            # Draw lines between corners if all are detected to define the world
+            if len(corner_positions) == 4 and all(pos is not None for pos in corner_positions.values()):
+                corners_order = ["bottom_left", "top_left", "top_right", "bottom_right"]
+                found_corners = True
+                for i in range(4):
+                    start = corner_positions[corners_order[i]]
+                    end = corner_positions[corners_order[(i + 1) % 4]]
+                    frame = cv2.line(frame, start, end, (0, 255, 0), 2)
+            if len(thymio_goal_positions) == 2 and all(pos is not None for pos in thymio_goal_positions.values()):
+                found_thymio_goal = True
+                
+        return frame, corner_positions, thymio_goal_positions, found_corners, found_thymio_goal
+    
+    def undistort_frame(self, frame):
+        h, w = frame.shape[:2]
+        newcameramtx, roi = cv2.getOptimalNewCameraMatrix(
+            self.camera_matrix, self.dist_coeffs, (w,h), 1, (w,h))
+        
+        # Undistort frame
+        frame = cv2.undistort(frame, self.camera_matrix, self.dist_coeffs, None, newcameramtx)
+        
+        # Crop the frame
+        x, y, w, h = roi
+        frame = frame[y:y+h, x:x+w]
+        
+        return frame
     
     def compute_perspective_transform(self, source_points, frame):
-        # Define the destination points (top-down view)
-        # Scale the points based on the world dimensions
-        source_points = np.float32(source_points)
-        dest_width = self.world_width * self.scale
-        dest_height = self.world_height * self.scale
         
+        scale_factor = self.resolution[1] / self.world_width
+        dest_width = self.world_width * scale_factor
+        dest_height = self.world_height * scale_factor
+        # Define destination points
         dest_points = np.float32([
             [0, dest_height],  # bottom-left
             [dest_width, dest_height],  # bottom-right
@@ -127,23 +202,11 @@ class Vision:
             [dest_width, 0] #top-right  
         ])
 
-    
         self.perspective_matrix = cv2.getPerspectiveTransform(source_points, dest_points)
 
-        return int(dest_width), int(dest_height)
-
-    def get_2d_map(self, frame, dimensions):
-        if self.perspective_matrix is not None:
-            return cv2.warpPerspective(frame, self.perspective_matrix, dimensions)
-        return None
-    
-    def cleanup(self):
-        if self.cap is not None:
-            self.cap.release()
-        cv2.destroyAllWindows()
+        return np.array([dest_width, dest_height]).astype(int)
 
     def get_frame(self):
-
         if self.cap is not None:
             ret, frame = self.cap.read()
             if not ret:
@@ -154,29 +217,30 @@ class Vision:
             frame = self.undistort_frame(frame)
             
             # Detect markers
-            corners, ids = self.detect_aruco_markers(frame)
-            frame_with_markers, world_coordinates = self.draw_markers(frame.copy(), corners, ids)
+            frame, corner_positions, thymio_goal_position, found_corners, found_thymio_goal = self.process_aruco_markers(frame)
             
-            map_view = None
-            dimensions = None
+            process_frame = None
+            roi = None
             
-            if world_coordinates is not None:
-            # Update perspective transform if we have all corners
-                source_points = world_coordinates
-                if source_points is not None:
-                    dimensions = self.compute_perspective_transform(source_points, frame)
-                       
-            # Generate 2D map
-            if dimensions is not None:
-                map_view = self.get_2d_map(frame, dimensions)
-                print("Map view generated")
-            return frame_with_markers, map_view
+            # Compute perspective transform if we have all corner positions
+            if found_corners:
+                source_points = np.array(list(corner_positions.values()), dtype=np.float32)
+                roi = self.compute_perspective_transform(source_points, frame)
+                if roi is not None:
+                    # Get the top-down view of the map
+                    process_frame = cv2.warpPerspective(frame, self.perspective_matrix, roi)
+                    process_frame = cv2.cvtColor(process_frame, cv2.COLOR_BGR2RGB)
+                    cv2.imwrite('map_view.png', process_frame)
+                
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self.interface.update_display(frame, process_frame)
+            return frame
+        return None
+            
         
-        return None, None
-
 def main():
     # Initialize Vision system with smaller display size
-    vision = Vision()  # Half of 1920x1080
+    vision = Vision()  
     
     # Try connecting to the webcam
     print(f"Trying to connect to device {vision.device_id}...")
@@ -188,24 +252,15 @@ def main():
     
     try:
         while True:
-            # Get frame (already processed and resized)
-            frame, map_view = vision.get_frame()
+            frame = vision.get_frame()
             if frame is None:
                 break
             
-            # Display the original frame
-            cv2.imshow('World View', frame)
-            
-            # Display the 2D map if available
-            if map_view is not None:
-                cv2.imshow('2D World Map', map_view)
-
-            # Press 'q' to quit
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if not vision.interface.is_window_open():
                 break
-                
+        
     finally:
-        vision.cleanup()
+        vision.cleanup_webcam()
 
 if __name__ == "__main__":
-    main()
+    main() 
