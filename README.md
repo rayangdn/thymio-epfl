@@ -29,3 +29,6 @@ conda env remove --name myenv  # Delete environment
 https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
 ## CALIBRATION OPENCV DOCU
 https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html
+
+## CANNY EDGES OPENCV
+https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html

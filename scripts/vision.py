@@ -3,52 +3,9 @@ import yaml
 import numpy as np
 import cv2
 import cv2.aruco as aruco
-import matplotlib.pyplot as plt
-
-class Interface:
-    def __init__(self):
-        plt.ion()
-        self.fig = plt.figure(figsize=(20, 10))
-        gs = self.fig.add_gridspec(2, 2)
-        gs.update(left=0.01, right=0.99, bottom=0.05, top=0.95, wspace=0.02, hspace=0.15)
-        
-        self.ax1 = self.fig.add_subplot(gs[0, 0])
-        self.ax2 = self.fig.add_subplot(gs[0, 1])
-        self.ax3 = self.fig.add_subplot(gs[1, 0])
-        self.ax4 = self.fig.add_subplot(gs[1, 1])
-        
-        self.fig.canvas.manager.set_window_title('Vision Interface')
-        
-        self.plots = [None] * 4
-
-    def update_display(self, original_frame, process_frame):
-        frames = [original_frame, process_frame, original_frame, original_frame]
-        titles = ['Webcam View', 'Processing View', 'Processing View', 'Result View']
-        axes = [self.ax1, self.ax2, self.ax3, self.ax4]
-        
-        for i, (frame, title, ax) in enumerate(zip(frames, titles, axes)):
-            if frame is None:
-                continue
-            if self.plots[i] is None:
-                self.plots[i] = ax.imshow(frame)
-                ax.set_title(title, fontsize=12, pad=10)
-                ax.axis('off')
-            else:
-                self.plots[i].set_data(frame)
-        
-        plt.draw()
-        plt.pause(0.001)
-
-    def is_window_open(self):
-        return bool(plt.get_fignums())
-
-    def cleanup(self):
-        plt.close('all')
-        
+   
 class Vision:
-    
     # Class-level constant for corner mapping
-    # USe order bf, tl, tr, br
     MAPPING = {
         0: "bottom_left",
         1: "bottom_right",
@@ -83,13 +40,13 @@ class Vision:
         self.world_width = self.config['world']['width']
         self.world_height = self.config['world']['height']
         
+        # Compute scale factor
+        self.scale_factor = self.resolution[1] / self.world_width
+        
         # Initialize ArUco detector
         self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
         self.parameters = aruco.DetectorParameters()
         self.detector = aruco.ArucoDetector(self.aruco_dict, self.parameters)
-        
-        # Initalize interface
-        self.interface = Interface()
 
     def connect_webcam(self):
         self.cap = cv2.VideoCapture(self.device_id)
@@ -104,7 +61,7 @@ class Vision:
     def cleanup_webcam(self):
         if self.cap is not None:
             self.cap.release()
-        self.interface.cleanup()
+        cv2.destroyAllWindows()
         
     def process_aruco_markers(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -139,7 +96,7 @@ class Vision:
             center = np.mean(c, axis=0).astype(int)
             
             # Get name from mapping
-            name = self.MAPPING[marker_id]
+            name = self.MAPPING.get(marker_id, f"Unknown Marker: {marker_id}")
             
             # Store corner positions
             if marker_id in [0, 1, 2, 3]:
@@ -189,17 +146,19 @@ class Vision:
         
         return frame
     
-    def compute_perspective_transform(self, source_points, frame):
+    def compute_perspective_transform(self, source_points):
         
-        scale_factor = self.resolution[1] / self.world_width
-        dest_width = self.world_width * scale_factor
-        dest_height = self.world_height * scale_factor
+        dest_width = self.world_width * self.scale_factor
+        dest_height = self.world_height * self.scale_factor
+        
+        # Add padding to the destination points
+        padding = 10
         # Define destination points
         dest_points = np.float32([
-            [0, dest_height],  # bottom-left
-            [dest_width, dest_height],  # bottom-right
-            [0, 0],  #top-left
-            [dest_width, 0] #top-right  
+            [-padding, dest_height+padding],  # bottom-left
+            [dest_width+padding, dest_height+padding],  # bottom-right
+            [-padding, -padding],  #top-left
+            [dest_width+padding, -padding] #top-right  
         ])
 
         self.perspective_matrix = cv2.getPerspectiveTransform(source_points, dest_points)
@@ -225,42 +184,16 @@ class Vision:
             # Compute perspective transform if we have all corner positions
             if found_corners:
                 source_points = np.array(list(corner_positions.values()), dtype=np.float32)
-                roi = self.compute_perspective_transform(source_points, frame)
+                roi = self.compute_perspective_transform(source_points)
                 if roi is not None:
                     # Get the top-down view of the map
                     process_frame = cv2.warpPerspective(frame, self.perspective_matrix, roi)
                     process_frame = cv2.cvtColor(process_frame, cv2.COLOR_BGR2RGB)
-                    cv2.imwrite('map_view.png', process_frame)
-                
+                    
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            self.interface.update_display(frame, process_frame)
-            return frame
-        return None
+            
+            return frame, process_frame, corner_positions, thymio_goal_position, found_corners, found_thymio_goal
+        
+        return None, None, None, None, None, None
             
         
-def main():
-    # Initialize Vision system with smaller display size
-    vision = Vision()  
-    
-    # Try connecting to the webcam
-    print(f"Trying to connect to device {vision.device_id}...")
-    if not vision.connect_webcam():
-        print("Could not find webcam on any device ID. Please check connection.")
-        return
-    
-    print(f"Successfully connected to device {vision.device_id}")
-    
-    try:
-        while True:
-            frame = vision.get_frame()
-            if frame is None:
-                break
-            
-            if not vision.interface.is_window_open():
-                break
-        
-    finally:
-        vision.cleanup_webcam()
-
-if __name__ == "__main__":
-    main() 
