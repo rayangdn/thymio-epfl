@@ -199,9 +199,12 @@ def main():
             if map_view is not None:
                 cv2.imshow('2D World Map', map_view)
 
-            # Press 'q' to quit
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
                 break
+            elif key == ord('s') and map_view is not None:  # Press 's' to save
+                cv2.imwrite('map_view.png', map_view)
+                print("Map view saved as 'map_view.png'")
                 
     finally:
         vision.cleanup()
