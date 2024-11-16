@@ -1,18 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-import yaml
+from utils.utils import mm_to_pixels
 
 class Interface:
     def __init__(self):
-        # Load config
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)             
-        config_path = os.path.join(parent_dir, 'config', 'config.yaml')
-        
-        with open(config_path, 'r') as file:
-            self.config = yaml.safe_load(file)
-            
         plt.ion()
         self.fig = plt.figure(figsize=(20, 10))
         gs = self.fig.add_gridspec(2, 2)
@@ -28,14 +19,35 @@ class Interface:
         
         self.fig.canvas.manager.set_window_title('Vision Interface')
         
-        self.scale_factor = self.config['webcam']['resolution'][1] / self.config['world']['width']
-        
-        # Initialize plots as None
+        # Initialize plots as None and add robot artists
         self.plots = [None for _ in range(4)]
+        self.robot_body = None
+        self.robot_direction = None
         
         print("Interface Initialized")
-
-    def update_display(self, original_frame, process_frame, trajectory_frame):
+    
+    def draw_robot(self, position, orientation, size=10):
+        pos_px = mm_to_pixels(position)
+        
+        # Clear previous robot visualization if it exists
+        if self.robot_body is not None:
+            self.robot_body.remove()
+        if self.robot_direction is not None:
+            self.robot_direction.remove()
+        
+        # Draw robot body as a circle
+        self.robot_body = plt.Circle((pos_px[0], pos_px[1]), size, color='magenta', fill=True)
+        self.axes[2].add_artist(self.robot_body)
+        
+        # Draw orientation line
+        end_x = pos_px[0] + size * 1.5 * np.cos(orientation)
+        end_y = pos_px[1] + size * 1.5 * np.sin(orientation)
+        self.robot_direction = self.axes[2].plot([pos_px[0], end_x], [pos_px[1], end_y], 'r-', linewidth=2)[0]
+        
+        # Update display
+        self.fig.canvas.draw_idle()
+    
+    def update_display(self, original_frame, process_frame, trajectory_frame, current_position=None, current_orientation=None):
         frames = [original_frame, process_frame, trajectory_frame, original_frame]
         titles = ['Webcam View', 'Processing View', 'Trajectory View', 'Result View']
         
@@ -50,8 +62,12 @@ class Interface:
             else:
                 self.plots[plot_idx].set_data(frame)
         
+        # If position and orientation are provided, update robot visualization
+        if current_position is not None and current_orientation is not None:
+            self.draw_robot(current_position, current_orientation)
+        
         plt.draw()
-        plt.pause(0.001)
+        plt.pause(0.01)
 
     def is_window_open(self):
         return bool(plt.get_fignums())

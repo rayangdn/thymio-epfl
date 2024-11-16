@@ -22,7 +22,6 @@ class GlobalNav:
         # Initialize Thymio
         self.thymio_size = self.config['thymio']['size']
         
-        
         # Compute scale factor
         self.scale_factor = self.config['webcam']['resolution'][1] / self.world_width
         
@@ -32,6 +31,7 @@ class GlobalNav:
         return np.sqrt(((p1[0] - p2[0]) ** 2) + ((p1[1] - p2[1]) ** 2))
     
     def convert_to_mm(self, points):
+        print(points)
         points_mm = points.copy()
         points_mm[:, 0] = points[:, 0] / self.scale_factor  # x coordinates
         points_mm[:, 1] = points[:, 1] / self.scale_factor  # y coordinates
@@ -72,49 +72,8 @@ class GlobalNav:
         return np.array(filtered_corners)
     
     def extend_obstacles(self, corners):
-        corners = np.array(corners)
-        
-        # Calculate the safety margin (half the robot size plus a small buffer)
-        safety_margin = (self.thymio_size['width'] / 2) + 0.5  # mm
-        
-        extended_corners = []
-        n = len(corners)
-        
-        for i in range(n):
-            current = corners[i]
-            prev = corners[(i - 1) % n]  # Previous point
-            next = corners[(i + 1) % n]  # Next point
-            
-            # Calculate vectors to previous and next points
-            v1 = current - prev
-            v2 = next - current
-            
-            # Normalize vectors
-            v1_norm = v1 / np.linalg.norm(v1)
-            v2_norm = v2 / np.linalg.norm(v2)
-            
-            # Calculate bisector vector
-            bisector = v1_norm + v2_norm
-            
-            # Normalize bisector
-            if np.linalg.norm(bisector) > 0:
-                bisector = bisector / np.linalg.norm(bisector)
-                
-                # Calculate the scaling factor for the bisector
-                # The more acute the angle, the larger the extension needed
-                angle = np.arccos(np.clip(np.dot(v1_norm, v2_norm), -1.0, 1.0))
-                scale = safety_margin / np.sin(angle/2) if angle != 0 else safety_margin
-                
-                # Extend the corner point
-                extended_point = current + bisector * scale
-                extended_corners.append(extended_point)
-            else:
-                # If vectors are opposite, extend perpendicular to both
-                perp = np.array([-v1_norm[1], v1_norm[0]])
-                extended_corners.append(current + perp * safety_margin)
-                extended_corners.append(current - perp * safety_margin)
-        
-        return np.array(extended_corners)
+        #need to implement this
+        return corners
 
     def detect_contours(self, img):
         img = img.copy()
@@ -163,7 +122,7 @@ class GlobalNav:
 
             for corner, extended_corners in zip(filtered_corners, extended_corners):
                 cv2.circle(contour_img, tuple(corner.astype(np.int32)), 5, (0, 0, 255), -1)
-                #cv2.circle(contour_img, tuple(extended_corners), 5, (255, 0, 0), -1)
+                cv2.circle(contour_img, tuple(extended_corners.astype(np.int32)), 5, (255, 0, 0), -1)
         
         # Draw the border of the world
         h, w = contour_img.shape[:2]
@@ -226,9 +185,6 @@ class GlobalNav:
         for pos_name, _ in thymio_goal_positions.items():
             point = (thymio_goal_positions[pos_name][0], thymio_goal_positions[pos_name][1])
             cv2.circle(trajectory_img, point, 5, (255, 0, 0), -1)
-            cv2.putText(trajectory_img, pos_name, 
-                        (point[0] + 10, point[1]),  
-                        cv2.FONT_HERSHEY_SIMPLEX, 1., (255, 0, 0), 1)
             
         # Convert thymio and goal positions to mm
         thymio_goal_positions_mm = {
@@ -242,8 +198,8 @@ class GlobalNav:
 
         # Draw lines connecting the points
         for i in range(len(trajectory_points_mm) - 1):
-            cv2.line(trajectory_img, tuple(trajectory_points_pixels[i]), tuple(trajectory_points_pixels[i + 1]), (0, 255, 0), 2)
+            cv2.line(trajectory_img, tuple(trajectory_points_pixels[i]), tuple(trajectory_points_pixels[i + 1]), (255, 255, 0), 2)
             
-        return trajectory_img
+        return trajectory_img, trajectory_points_mm, {"thymio": thymio_goal_positions_mm["thymio"]}
     
 
