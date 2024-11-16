@@ -2,8 +2,8 @@
 
 # Configuration for the world
 world:
-  width: 21
-  height: 12
+  width: 300
+  height: 180
 
 # Configuration for the thymio
 thymio:

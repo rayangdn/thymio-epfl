@@ -1,7 +1,7 @@
 from vision import Vision
 from interface import Interface
 from global_nav import GlobalNav
-import cv2
+import numpy as np
 
 def main():
     # Initialize Vision and Interface systems
@@ -19,12 +19,14 @@ def main():
     
     try:
         while interface.is_window_open():
-            frame, process_frame, _, _, _, _ = vision.get_frame()
+            frame, process_frame, thymio_goal_position  = vision.get_frame()
             trajectory_frame = None
-            obstacle_corners = None
             if process_frame is not None:
-                cv2.imwrite('frame.jpg', process_frame)
-                trajectory_frame, _ = global_nav.detect_contours(process_frame)
+                thymio_goal_positions = {
+                    "thymio": np.array([30, 30]),
+                    "goal": np.array([900, 550])
+                    }
+                trajectory_frame = global_nav.get_trajectory(process_frame, thymio_goal_positions)
             interface.update_display(frame, process_frame, trajectory_frame)
             
     finally:

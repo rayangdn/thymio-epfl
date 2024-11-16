@@ -5,8 +5,6 @@ import yaml
 
 class Interface:
     def __init__(self):
-        print("Initializing Interface")
-        
         # Load config
         current_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(current_dir)             
@@ -34,6 +32,8 @@ class Interface:
         
         # Initialize plots as None
         self.plots = [None for _ in range(4)]
+        
+        print("Interface Initialized")
 
     def update_display(self, original_frame, process_frame, trajectory_frame):
         frames = [original_frame, process_frame, trajectory_frame, original_frame]

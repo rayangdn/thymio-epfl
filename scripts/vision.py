@@ -16,8 +16,6 @@ class Vision:
     }
     
     def __init__(self):
-        print("Initializing Vision")
-        
         # Load config
         current_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(current_dir)             
@@ -47,6 +45,8 @@ class Vision:
         self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
         self.parameters = aruco.DetectorParameters()
         self.detector = aruco.ArucoDetector(self.aruco_dict, self.parameters)
+        
+        print("Vision Initialized")
 
     def connect_webcam(self):
         self.cap = cv2.VideoCapture(self.device_id)
@@ -78,59 +78,54 @@ class Vision:
             "thymio": None,
             "goal": None
         }
-        
         found_corners = False
-        found_thymio_goal = False
         
-        if ids is None:
-            return frame, corner_positions, thymio_goal_positions, found_corners, found_thymio_goal
+        if ids is not None:
         
-        # Draw markers
-        frame = aruco.drawDetectedMarkers(frame, corners, ids)
-        
-        for i in range(len(ids)):
-            marker_id = ids[i][0]
-            c = corners[i][0]
+            # Draw markers
+            frame = aruco.drawDetectedMarkers(frame, corners, ids)
             
-            # Get center of marker
-            center = np.mean(c, axis=0).astype(int)
-            
-            # Get name from mapping
-            name = self.MAPPING.get(marker_id, f"Unknown Marker: {marker_id}")
-            
-            # Store corner positions
-            if marker_id in [0, 1, 2, 3]:
-                corner_positions[name] = (int(c[0][0]), int(c[0][1])) 
-            
-            # Store thymio and goal positions
-            if marker_id in [4, 5]:
-                thymio_goal_positions[name] = (int(center[0][0]), int(center[0][1]))
-            
-            # Draw background rectangle for better text visibility
-            text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-            cv2.rectangle(frame, 
-                        (center[0] - 5, center[1] - text_size[1] - 5),
-                        (center[0] + text_size[0] + 5, center[1] + 5),
-                        (0, 0, 0), -1)
-            
-            # Draw marker name 
-            cv2.putText(frame, name, 
-                        (center[0], center[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, 
-                        0.5, (0, 0, 255), 2)
-            
-            # Draw lines between corners if all are detected to define the world
-            if len(corner_positions) == 4 and all(pos is not None for pos in corner_positions.values()):
-                corners_order = ["bottom_left", "top_left", "top_right", "bottom_right"]
-                found_corners = True
-                for i in range(4):
-                    start = corner_positions[corners_order[i]]
-                    end = corner_positions[corners_order[(i + 1) % 4]]
-                    frame = cv2.line(frame, start, end, (0, 255, 0), 2)
-            if len(thymio_goal_positions) == 2 and all(pos is not None for pos in thymio_goal_positions.values()):
-                found_thymio_goal = True
+            for i in range(len(ids)):
+                marker_id = ids[i][0]
+                c = corners[i][0]
                 
-        return frame, corner_positions, thymio_goal_positions, found_corners, found_thymio_goal
+                # Get center of marker
+                center = np.mean(c, axis=0).astype(int)
+                
+                # Get name from mapping
+                name = self.MAPPING.get(marker_id, f"Unknown Marker: {marker_id}")
+                
+                # Store corner positions
+                if marker_id in [0, 1, 2, 3]:
+                    corner_positions[name] = np.array([c[0][0], c[0][1]]).astype(int)
+                
+                # Store thymio and goal positions
+                if marker_id in [4, 5]:
+                    thymio_goal_positions[name] = np.array([center[0][0], center[0][1]]).astype(int)
+                
+                # Draw background rectangle for better text visibility
+                text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
+                cv2.rectangle(frame, 
+                            (center[0] - 5, center[1] - text_size[1] - 5),
+                            (center[0] + text_size[0] + 5, center[1] + 5),
+                            (0, 0, 0), -1)
+                
+                # Draw marker name 
+                cv2.putText(frame, name, 
+                            (center[0], center[1]),
+                            cv2.FONT_HERSHEY_SIMPLEX, 
+                            0.5, (0, 0, 255), 2)
+                
+                # Draw lines between corners if all are detected to define the world
+                if len(corner_positions) == 4 and all(pos is not None for pos in corner_positions.values()):
+                    corners_order = ["bottom_left", "top_left", "top_right", "bottom_right"]
+                    found_corners = True
+                    for i in range(4):
+                        start = tuple(map(int, corner_positions[corners_order[i]]))
+                        end = tuple(map(int, corner_positions[corners_order[(i + 1) % 4]]))
+                        frame = cv2.line(frame, start, end, (0, 255, 0), 2)
+        
+        return frame, corner_positions, thymio_goal_positions, found_corners
     
     def undistort_frame(self, frame):
         h, w = frame.shape[:2]
@@ -148,17 +143,16 @@ class Vision:
     
     def compute_perspective_transform(self, source_points):
         
+        # add a padding to the destination points
         dest_width = self.world_width * self.scale_factor
         dest_height = self.world_height * self.scale_factor
         
-        # Add padding to the destination points
-        padding = 10
         # Define destination points
         dest_points = np.float32([
-            [-padding, dest_height+padding],  # bottom-left
-            [dest_width+padding, dest_height+padding],  # bottom-right
-            [-padding, -padding],  #top-left
-            [dest_width+padding, -padding] #top-right  
+            [0, dest_height],  # bottom-left
+            [dest_width, dest_height],  # bottom-right
+            [0, 0],  #top-left
+            [dest_width, 0] #top-right  
         ])
 
         self.perspective_matrix = cv2.getPerspectiveTransform(source_points, dest_points)
@@ -176,7 +170,7 @@ class Vision:
             frame = self.undistort_frame(frame)
             
             # Detect markers
-            frame, corner_positions, thymio_goal_position, found_corners, found_thymio_goal = self.process_aruco_markers(frame)
+            frame, corner_positions, thymio_goal_position, found_corners = self.process_aruco_markers(frame)
             
             process_frame = None
             roi = None
@@ -188,12 +182,16 @@ class Vision:
                 if roi is not None:
                     # Get the top-down view of the map
                     process_frame = cv2.warpPerspective(frame, self.perspective_matrix, roi)
+                    
+                    # add padding to the frame to avoid edge cases
+                    padding = 10
+                    process_frame = process_frame[padding:-padding, padding:-padding]
                     process_frame = cv2.cvtColor(process_frame, cv2.COLOR_BGR2RGB)
                     
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            return frame, process_frame, corner_positions, thymio_goal_position, found_corners, found_thymio_goal
+            return frame, process_frame, thymio_goal_position
         
-        return None, None, None, None, None, None
+        return None, None, None
             
         
