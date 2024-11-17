@@ -1,4 +1,13 @@
 import numpy as np
+import cv2
+
+def add_label(image, text):
+    # Add black background for text
+    cv2.rectangle(image, (0, 0), (200, 30), (0, 0, 0), -1)
+    # Add white text
+    cv2.putText(image, text, (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 
+                0.7, (255, 255, 255), 2)
+    return image
 
 def mm_to_pixels(position_mm):
     # Convert from mm to pixels

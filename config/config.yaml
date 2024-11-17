@@ -1,5 +1,22 @@
-# Configuration file for the thymio n
+# Configuration file for the thymio
 
+# Configuration for the controller
+controller:
+  # The angle tolerance in degrees
+  angle_tolerance: 1
+  # The distance tolerance in mm
+  distance_tolerance: 1
+  # The rotation speed scale
+  scale_rotation_speed: 100
+  # Maximum rotation speed
+  max_rotation_speed: 100
+  # The translation speed scale
+  scale_translation_speed: 20
+  # Minmimum translation speed
+  min_translation_speed: 200
+  # Maximum translation speed
+  max_translation_speed: 500
+   
 # Configuration for the world
 world:
   width: 300
@@ -12,10 +29,11 @@ thymio:
    length: 1
 # Configuration for the webcam
 webcam:
-  device_id: 2
+  device_id: 0
   matrix:
     - [1484.14935, 0         , 964.220337]
     - [0         , 1490.50225, 539.531044]
     - [0         , 0         , 1         ]
   distortion: [0.154056967, -1.04865202, -0.000689137957, -0.00132248869e-03, 1.48905183]
   resolution: [1920, 1080]
+  padding: 10
