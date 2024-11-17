@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')  # Use TkAgg backend instead of Qt
 import numpy as np
 import os
 import yaml
