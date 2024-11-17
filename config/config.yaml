@@ -29,11 +29,11 @@ thymio:
    length: 1
 # Configuration for the webcam
 webcam:
-  device_id: 0
+  device_id: 2
   matrix:
     - [1484.14935, 0         , 964.220337]
     - [0         , 1490.50225, 539.531044]
     - [0         , 0         , 1         ]
   distortion: [0.154056967, -1.04865202, -0.000689137957, -0.00132248869e-03, 1.48905183]
   resolution: [1920, 1080]
-  padding: 10
+  padding: 1
