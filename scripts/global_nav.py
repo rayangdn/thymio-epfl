@@ -4,11 +4,12 @@ import cv2
 import pyvisgraph as vg
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils import utils
 
 class GlobalNav:
-    def __init__(self, world_width, world_height, obstacle_min_area, thymio_size, scale_factor):
+    def __init__(self, world_width, world_height, obstacle_min_area, thymio_size, scale_factor, aruco_size):
         
         # Initialize World
         self.world_width = world_width
@@ -20,7 +21,22 @@ class GlobalNav:
         # Compute scale factor
         self.scale_factor = scale_factor
         self.obstale_min_area = utils.mm_to_pixels(obstacle_min_area, scale_factor**2)
+        
+        # Add mask size for ArUco markers
+        self.aruco_mask_size = utils.mm_to_pixels(aruco_size, scale_factor)
         print("GlobalNav Initialized")
+    
+    def _create_aruco_mask(self, img, thymio_position, goal_position):
+    
+        if np.any(thymio_position):
+            pos = tuple(map(int, thymio_position))
+            cv2.circle(img, pos, self.aruco_mask_size, 255, -1)
+            
+        if np.any(goal_position):
+            pos = tuple(map(int, goal_position))
+            cv2.circle(img, pos, self.aruco_mask_size, 255, -1)
+            
+        return img
         
     def _filter_close_corners(self, corners, min_distance=10):
         if len(corners) == 0:
@@ -58,19 +74,22 @@ class GlobalNav:
                 
         return extended_corners
     
-    def _detect_contours(self, img):
+    def _detect_contours(self, img, thymio_position, goal_position):
         img = img.copy()
 
         # Convert to grayscale
         gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-
+        
         # Apply Gaussian blur for noise reduction
         blurred_img = cv2.GaussianBlur(gray_img, (5, 5), 0)
 
         _, threshold_img = cv2.threshold(blurred_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # Create mask to exclude ArUco markers
+        masked_img = self._create_aruco_mask(threshold_img, thymio_position, goal_position)
 
         # Apply Canny edge detection
-        edges_img = cv2.Canny(threshold_img, 50, 150)
+        edges_img = cv2.Canny(masked_img, 50, 150)
 
         # Find contours
         contours, _ = cv2.findContours(edges_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -82,6 +101,7 @@ class GlobalNav:
         obstacles_corners = {}
 
         for i, contour in enumerate(contours):
+            pass
             # Draw the contour
             
             # Filter small contours
@@ -112,8 +132,8 @@ class GlobalNav:
     
     def _compute_trajectory(self, obstacles_corners, thymio_position, goal_position):
         # Extract initial and goal positions
-        thymio_pos = tuple(thymio_position['thymio'])
-        goal_pos = tuple(goal_position['goal'])
+        thymio_pos = tuple(thymio_position)
+        goal_pos = tuple(goal_position)
         
         # Convert obstacles to list format for pyvisgraph
         obstacles = []
@@ -156,36 +176,29 @@ class GlobalNav:
         return path_points
     
     def get_trajectory(self, img, thymio_position, goal_position):
-        # Check if image is None
-        if img is None:
+        # Check if image is None, thymio and goal positions are not detected
+        if (img is None) or (not np.any(thymio_position)) or not (np.any(goal_position)):
             return None, None, None, False
         
         # Detect obstacles
-        trajectory_img, obstacles_corners = self._detect_contours(img)
+        trajectory_img, obstacles_corners = self._detect_contours(img, thymio_position, goal_position)
 
-        # Check if thymio and goal positions are None
-        if thymio_position["thymio"] is None or goal_position["goal"] is None:
-            return trajectory_img, None, obstacles_corners, False
-        
         # Compute trajectory
         trajectory_points = self._compute_trajectory(obstacles_corners, thymio_position, goal_position)
         
         # Add thymio and goal positions to the image
-        if thymio_position["thymio"] is not None:
-            # Convert numpy array to tuple of integers
-            thymio_pos = tuple(thymio_position["thymio"])
+        if np.any(thymio_position):
+            thymio_pos = tuple(map(int, thymio_position)) 
             cv2.circle(trajectory_img, thymio_pos, 5, (0, 0, 255), -1)
-            text_pos = (thymio_pos[0] + 10, thymio_pos[1] - 10)  # Offset the text position
+            text_pos = (thymio_pos[0] + 10, thymio_pos[1] - 10)  
             cv2.putText(trajectory_img, "Start", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                
-        # For goal position
-        if goal_position["goal"] is not None:
-            # Convert numpy array to tuple of integers
-            goal_pos = tuple(goal_position["goal"])
+
+        if np.any(goal_position):
+            goal_pos = tuple(map(int, goal_position))
             cv2.circle(trajectory_img, goal_pos, 5, (0, 0, 255), -1)
-            text_pos = (goal_pos[0] + 10, goal_pos[1] - 10)  # Offset the text position
+            text_pos = (goal_pos[0] + 10, goal_pos[1] - 10)  
             cv2.putText(trajectory_img, "Goal", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-            
+                        
         # Draw trajectory
         for i in range(len(trajectory_points) - 1):
             # Convert numpy arrays to integer tuples for OpenCV

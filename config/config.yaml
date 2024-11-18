@@ -22,6 +22,7 @@ world:
   width: 300 #mm
   height: 180 #mm
   obstacle_min_area: 100 #mm² 
+  aruco_size: 25 #mm
 
 # Configuration for the thymio
 thymio:
@@ -37,4 +38,4 @@ webcam:
     - [0         , 0         , 1         ]
   distortion: [0.154056967, -1.04865202, -0.000689137957, -0.00132248869e-03, 1.48905183]
   resolution: [1920, 1080]
-  padding: 10
+  padding: 10 #pixels
