@@ -176,7 +176,7 @@ class GlobalNav:
             thymio_pos = tuple(thymio_position["thymio"])
             cv2.circle(trajectory_img, thymio_pos, 5, (0, 0, 255), -1)
             text_pos = (thymio_pos[0] + 10, thymio_pos[1] - 10)  # Offset the text position
-            cv2.putText(trajectory_img, "Thymio Initial Position", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            cv2.putText(trajectory_img, "Start", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                 
         # For goal position
         if goal_position["goal"] is not None:
