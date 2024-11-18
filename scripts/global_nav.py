@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils import utils
 
 class GlobalNav:
-    def __init__(self, world_width, world_height, obstacle_min_area, thymio_size, scale_factor, aruco_size):
+    def __init__(self, world_width, world_height, obstacle_min_area, thymio_size, security_margin, scale_factor, aruco_size):
         
         # Initialize World
         self.world_width = world_width
@@ -17,6 +17,7 @@ class GlobalNav:
         
         # Initialize Thymio
         self.thymio_width = utils.mm_to_pixels(thymio_size['width'], scale_factor)
+        self.security_margin = utils.mm_to_pixels(security_margin, scale_factor)
         
         # Compute scale factor
         self.scale_factor = scale_factor
@@ -70,7 +71,7 @@ class GlobalNav:
                 normalized_vector = vector / length
                 
                 # Move the corner point outward by the width of the thymio
-                extended_corners[i] = corners[i] + normalized_vector * self.thymio_width 
+                extended_corners[i] = corners[i] + normalized_vector * (self.thymio_width + self.security_margin) 
                 
         return extended_corners
     
@@ -101,7 +102,6 @@ class GlobalNav:
         obstacles_corners = {}
 
         for i, contour in enumerate(contours):
-            pass
             # Draw the contour
             
             # Filter small contours
@@ -131,6 +131,9 @@ class GlobalNav:
         return contour_img, obstacles_corners
     
     def _compute_trajectory(self, obstacles_corners, thymio_position, goal_position):
+        
+        path_points = None
+        
         # Extract initial and goal positions
         thymio_pos = tuple(thymio_position)
         goal_pos = tuple(goal_position)
@@ -181,10 +184,10 @@ class GlobalNav:
             return None, None, None, False
         
         # Detect obstacles
-        trajectory_img, obstacles_corners = self._detect_contours(img, thymio_position, goal_position)
+        trajectory_img, obstacles_corners_pixels = self._detect_contours(img, thymio_position, goal_position)
 
         # Compute trajectory
-        trajectory_points = self._compute_trajectory(obstacles_corners, thymio_position, goal_position)
+        trajectory_points_pixels = self._compute_trajectory(obstacles_corners_pixels, thymio_position, goal_position)
         
         # Add thymio and goal positions to the image
         if np.any(thymio_position):
@@ -200,10 +203,27 @@ class GlobalNav:
             cv2.putText(trajectory_img, "Goal", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                         
         # Draw trajectory
-        for i in range(len(trajectory_points) - 1):
-            # Convert numpy arrays to integer tuples for OpenCV
-            point1 = tuple(map(int, trajectory_points[i]))
-            point2 = tuple(map(int, trajectory_points[i + 1]))
+        for i in range(len(trajectory_points_pixels) - 1):
+            point1 = tuple(map(int, trajectory_points_pixels[i]))
+            point2 = tuple(map(int, trajectory_points_pixels[i + 1]))
             cv2.line(trajectory_img, point1, point2, (0, 0, 255), 2)
+        
+        obstacles_corners_mm = obstacles_corners_pixels 
+        trajectory_points_mm = np.array(trajectory_points_pixels)
+        
+        # Convert obstacles, trajectory points to mm
+        if not obstacles_corners_mm:
+            obstacles_corners_mm = {
+                key: np.array([
+                    [utils.pixels_to_mm(point[0], self.scale_factor), 
+                     utils.pixels_to_mm(point[1], self.scale_factor)]
+                    for point in points]) for key, points in obstacles_corners_mm.items()
+            }
+        
+        if trajectory_points_mm.size>=0:
+            trajectory_points_mm = np.array([
+                [utils.pixels_to_mm(point[0], self.scale_factor), 
+                 utils.pixels_to_mm(point[1], self.scale_factor)] 
+                for point in trajectory_points_mm])
             
-        return trajectory_img, trajectory_points, obstacles_corners, True
+        return trajectory_img, trajectory_points_mm, obstacles_corners_mm, True

@@ -21,9 +21,8 @@ def pixels_to_mm(number, scale_factor):
     return number / scale_factor
 
 def simulate_robot_movement(position, orientation, command, dt=0.005):
-    
-    new_position = position.copy()
-    new_orientation = orientation
+    new_position = np.array(position, dtype=np.float64)
+    new_orientation = float(orientation)  
     if command['action'] == 'move_and_rotate':
         # Update orientation
         new_orientation += command['rotation_speed'] * dt
