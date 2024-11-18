@@ -13,7 +13,7 @@ class Vision():
         5: "goal"
     }
     
-    def __init__(self, device_id, camera_matrix, dist_coeffs, resolution, padding, world_width, world_height):
+    def __init__(self, device_id, camera_matrix, dist_coeffs, resolution, padding, scale_factor, world_width, world_height):
             
         # Initialize camera
         self.cap = None
@@ -22,6 +22,7 @@ class Vision():
         self.dist_coeffs = dist_coeffs
         self.resolution = resolution
         self.padding = padding
+        self.scale_factor = scale_factor
         
         # Perspective transform matrix
         self.perspective_matrix = None
@@ -29,9 +30,6 @@ class Vision():
         # Initialize World
         self.world_width = world_width
         self.world_height = world_height
-        
-        # Compute scale factor
-        self.scale_factor = self.resolution[1] / self.world_width
         
         # Initialize ArUco detector
         self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
@@ -55,7 +53,7 @@ class Vision():
             self.cap.release()
         cv2.destroyAllWindows()
         
-    def process_aruco_markers(self, frame):
+    def _process_aruco_markers(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = self.detector.detectMarkers(gray)
         
@@ -124,7 +122,7 @@ class Vision():
         
         return frame, corner_positions, thymio_position, goal_position, found_corners
     
-    def undistort_frame(self, frame):
+    def _undistort_frame(self, frame):
         h, w = frame.shape[:2]
         newcameramtx, roi = cv2.getOptimalNewCameraMatrix(
             self.camera_matrix, self.dist_coeffs, (w,h), 1, (w,h))
@@ -138,7 +136,7 @@ class Vision():
         
         return frame
     
-    def compute_perspective_transform(self, source_points):
+    def _compute_perspective_transform(self, source_points):
         
         # define destination points
         dest_width = self.world_width * self.scale_factor
@@ -164,10 +162,10 @@ class Vision():
                 return None
             
             # Undistort the frame
-            frame = self.undistort_frame(frame)
+            frame = self._undistort_frame(frame)
             
             # Detect markers
-            frame, corner_positions, thymio_position, goal_position, found_corners = self.process_aruco_markers(frame)
+            frame, corner_positions, thymio_position, goal_position, found_corners = self._process_aruco_markers(frame)
             
             process_frame = None
             roi = None
@@ -175,7 +173,7 @@ class Vision():
             # Compute perspective transform if we have all corner positions
             if found_corners:
                 source_points = np.array(list(corner_positions.values()), dtype=np.float32)
-                roi = self.compute_perspective_transform(source_points)
+                roi = self._compute_perspective_transform(source_points)
                 if roi is not None:
                     # Get the top-down view of the map
                     process_frame = cv2.warpPerspective(frame, self.perspective_matrix, roi)

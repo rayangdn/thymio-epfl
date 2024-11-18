@@ -19,14 +19,15 @@ controller:
    
 # Configuration for the world
 world:
-  width: 300
-  height: 180
+  width: 300 #mm
+  height: 180 #mm
+  obstacle_min_area: 100 #mm² 
 
 # Configuration for the thymio
 thymio:
  size:
-   width: 1
-   length: 1
+   width: 10
+   length: 10
 # Configuration for the webcam
 webcam:
   device_id: 2
@@ -36,4 +37,4 @@ webcam:
     - [0         , 0         , 1         ]
   distortion: [0.154056967, -1.04865202, -0.000689137957, -0.00132248869e-03, 1.48905183]
   resolution: [1920, 1080]
-  padding: 1
+  padding: 10
