@@ -26,8 +26,8 @@ world:
 # Configuration for the thymio
 thymio:
  size:
-   width: 10
-   length: 10
+   width: 10 #mm
+   length: 10 #mm
 # Configuration for the webcam
 webcam:
   device_id: 2

@@ -92,11 +92,11 @@ class Vision():
                 
                 # Store thymio position
                 if marker_id in [4]:
-                    thymio_position[name] = np.array([center[0][0], center[0][1]]).astype(int)
+                    thymio_position[name] = np.array([center[0], center[1]]).astype(int)
                     
                 # Store goal position
                 if marker_id in [5]:
-                    goal_position[name] = np.array([center[0][0], center[0][1]]).astype(int)
+                    goal_position[name] = np.array([center[0], center[1]]).astype(int)
                 
                 # Draw background rectangle for better text visibility
                 text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
@@ -178,13 +178,24 @@ class Vision():
                     # Get the top-down view of the map
                     process_frame = cv2.warpPerspective(frame, self.perspective_matrix, roi)
                     
+                    # Transform positions if markers were detected
+                    if thymio_position["thymio"] is not None:
+                        point = np.array([[thymio_position["thymio"]]], dtype=np.float32)
+                        transformed_point = cv2.perspectiveTransform(point, self.perspective_matrix)[0][0]
+                        thymio_position["thymio"] = np.round(transformed_point - self.padding).astype(int)
+                        
+                    if goal_position["goal"] is not None:
+                        point = np.array([[goal_position["goal"]]], dtype=np.float32)
+                        transformed_point = cv2.perspectiveTransform(point, self.perspective_matrix)[0][0]
+                        goal_position["goal"] = np.round(transformed_point - self.padding).astype(int)
+                        
                     # add padding to the frame to avoid edge cases
                     process_frame = process_frame[self.padding:-self.padding, self.padding:-self.padding]
                     process_frame = cv2.cvtColor(process_frame, cv2.COLOR_BGR2RGB)
                     
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            return frame, process_frame, thymio_position, goal_position
+            return frame, process_frame, thymio_position, thymio_orientation_rad,  goal_position
         
         return None, None, None, None
             
