@@ -71,7 +71,7 @@ class GlobalNav:
                 normalized_vector = vector / length
                 
                 # Move the corner point outward by the width of the thymio
-                extended_corners[i] = corners[i] + normalized_vector * (self.thymio_width + self.security_margin) 
+                extended_corners[i] = corners[i] + normalized_vector * (self.thymio_width/2 + self.security_margin) 
                 
         return extended_corners
     

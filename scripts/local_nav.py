@@ -32,12 +32,15 @@ class LocalNav():
             
             # Calculate rotation speed based on angle difference
             # The bigger the difference, the slower the forward motion
-            rotation_speed = np.clip(self.scale_rotation_speed*angle_diff, -self.max_rotation_speed, self.max_rotation_speed)
+            if abs(angle_diff) < self.angle_threshold:
+                rotation_speed = 0
+            else: 
+                rotation_speed = np.clip(self.scale_rotation_speed*angle_diff, -self.max_rotation_speed, self.max_rotation_speed)
             
             # Calculate forward speed based on both distance and angle difference
             # Reduce forward speed when angle difference is large
             angle_factor = np.cos(angle_diff)  # Will be 1 when aligned, less when not
-            distance_factor = np.clip(self.scale_translation_speed*distance, self.min_translation_speed, 
+            distance_factor = np.clip(self.scale_translation_speed*distance/100, self.min_translation_speed, 
                                       self.max_translation_speed)
             
             forward_speed = distance_factor * max(0, angle_factor)
@@ -76,14 +79,11 @@ class LocalNav():
                 # print(f"Forward speed: {forward_speed:.2f}")
                 # print(f"Rotation speed: {rotation_speed:.2f}")
                 # print(f"Current checkpoint: {self.current_checkpoint}")
-                left_speed = forward_speed
-                right_speed = forward_speed
-                if angle_diff >= 0:
-                    left_speed  += rotation_speed
-                    right_speed -= rotation_speed
-                else:
-                    left_speed  -= rotation_speed
-                    right_speed += rotation_speed
+                    
+                
+                left_speed = forward_speed + rotation_speed
+                right_speed = forward_speed - rotation_speed
+
                 command = {
                     'action': 'move_and_rotate',
                     'left_speed': left_speed,
