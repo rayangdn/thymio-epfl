@@ -227,3 +227,4 @@ class GlobalNav:
                 for point in trajectory_points_mm])
             
         return trajectory_img, trajectory_points_mm, obstacles_corners_mm, True
+    

@@ -76,11 +76,18 @@ class LocalNav():
                 # print(f"Forward speed: {forward_speed:.2f}")
                 # print(f"Rotation speed: {rotation_speed:.2f}")
                 # print(f"Current checkpoint: {self.current_checkpoint}")
-                
+                left_speed = forward_speed
+                right_speed = forward_speed
+                if angle_diff >= 0:
+                    left_speed  += rotation_speed
+                    right_speed -= rotation_speed
+                else:
+                    left_speed  -= rotation_speed
+                    right_speed += rotation_speed
                 command = {
                     'action': 'move_and_rotate',
-                    'forward_speed': forward_speed,
-                    'rotation_speed': rotation_speed,
+                    'left_speed': left_speed,
+                    'right_speed': right_speed,
                     'current_checkpoint': self.current_checkpoint
                 }
                 return command, False
@@ -93,4 +100,4 @@ class LocalNav():
             command, goal_reached = self._trajectory_following(trajectory_points)
 
             return command, goal_reached
-            
+        
