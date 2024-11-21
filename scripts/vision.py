@@ -230,7 +230,7 @@ class Vision():
                     if np.all(goal_position):  
                         transformed_point = cv2.perspectiveTransform(goal_position, self.perspective_matrix)[0][0]
                         goal_position = np.array([utils.pixels_to_mm(transformed_point[0], self.scale_factor), 
-                                                  utils.pixels_to_mm(transformed_point[1], self.scale_factor)])
+                                                utils.pixels_to_mm(transformed_point[1], self.scale_factor)])
                         found_goal = True
                     
                     process_frame = cv2.cvtColor(process_frame, cv2.COLOR_BGR2RGB)

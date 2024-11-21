@@ -35,10 +35,10 @@ controller:
    
 # Configuration for the world
 world:
-  width: 500 #mm
-  height: 270 #mm
+  width: 760 #mm
+  height: 500 #mm
   obstacle_min_area: 300 #mm² 
-  aruco_size: 25 #mm
+  aruco_size: 30 #mm
 
 # Configuration for the thymio
 thymio:
