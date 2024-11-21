@@ -18,6 +18,8 @@ controller:
   min_translation_speed: 20
   # Maximum translation speed
   max_translation_speed: 300
+  # thymio speed to mm/s scale
+  scale_speed: 0.43478260869565216
   # Threshold for kidnapping in mm
   kidnap: 20
   # max iter before avoid obstacles
@@ -29,6 +31,7 @@ controller:
   # weights for obstacle avoidance
   weight_left: [6, 9, -10, -9, -6]
   weight_right: [-6, -9, -10, 9, 6]
+
    
 # Configuration for the world
 world:

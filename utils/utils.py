@@ -1,6 +1,13 @@
 import numpy as np
 import cv2
 from IPython.display import clear_output, Image, display
+import yaml
+
+# Load the configuration file
+with open('../config/config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+
+scale_factor = config['webcam']['resolution'][1]/config['world']['width']
 
 def add_label(image, text):
     label_image = image.copy()
@@ -34,6 +41,13 @@ def simulate_robot_movement(position, orientation, command, dt=0.005):
 
 # Draw robot as rectangle
 def draw_robot(frame, position, orientation, thymio_size):
+    thymio_size = thymio_size.copy()
+    position = position.copy()
+    thymio_size = np.array([mm_to_pixels(thymio_size['width'], scale_factor), 
+                            mm_to_pixels(thymio_size['length'], scale_factor)])
+    position = np.array([mm_to_pixels(position[0], scale_factor), 
+                         mm_to_pixels(position[1], scale_factor)])
+    
     width = thymio_size[0]
     length = thymio_size[1]
     
