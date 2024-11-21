@@ -213,7 +213,7 @@ class GlobalNav:
         cv2.putText(trajectory_img, "Goal", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         
         # Convert to mm
-        if not obstacles_corners:
+        if obstacles_corners:
             obstacles_corners = {
                 key: np.array([
                     [utils.pixels_to_mm(point[0], self.scale_factor), 
@@ -221,7 +221,7 @@ class GlobalNav:
                     for point in points]) for key, points in obstacles_corners.items()
             }
         
-        if trajectory_pos.size>=0:
+        if len(trajectory_pos)>=0:
             # Draw trajectory
             for i in range(len(trajectory_pos) - 1):
                 point1 = tuple(map(int, trajectory_pos[i]))

@@ -223,12 +223,14 @@ class Vision():
                         
                         #Pixels to mm
                         thymio_position = np.array([utils.pixels_to_mm(thymio_position[0], self.scale_factor), 
-                            utils.pixels_to_mm(thymio_position[1], self.scale_factor)])
+                            utils.pixels_to_mm(thymio_position[1], self.scale_factor), orientation])
                         found_thymio = True
                     
                     # Check if goal position is detected
                     if np.all(goal_position):  
-                        transformed_point = cv2.perspectiveTransform(goal_position, self.perspective_matrix)[0][0]
+                        point = np.array([[goal_position]], dtype=np.float32)
+                        transformed_point = cv2.perspectiveTransform(point, self.perspective_matrix)[0][0]
+                        goal_position = np.round(transformed_point).astype(int)
                         goal_position = np.array([utils.pixels_to_mm(transformed_point[0], self.scale_factor), 
                                                 utils.pixels_to_mm(transformed_point[1], self.scale_factor)])
                         found_goal = True
@@ -237,7 +239,7 @@ class Vision():
             
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             thymio_orientation = thymio_position[2] # Get orientation 
-            thymio_position = thymio_position[:2] # Get x, y position in pixels
+            thymio_position = np.array(thymio_position[:2]) # Get x, y position in pixels
                 
             return frame, process_frame, thymio_position, thymio_orientation, goal_position, found_thymio, found_goal
         

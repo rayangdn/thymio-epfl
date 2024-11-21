@@ -90,11 +90,11 @@ class LocalNav():
             if distance < self.distance_threshold:
                 self.current_checkpoint += 1
                 if self.current_checkpoint >= len(trajectory_points):
-                    print("\nTrajectory completed!")
                     command = {
                         'action': 'stop',
                         'message': 'Trajectory completed'
                     }
+                    self.current_checkpoint = 0
                     return command, True
             
             # Calculate combined motion commands

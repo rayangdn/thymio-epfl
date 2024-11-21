@@ -93,7 +93,7 @@ def draw_trajectory(frame, position_history):
     if len(position_history) <= 1:
         return frame
         
-    path_points = np.array(position_history)
+    path_points = np.array([[mm_to_pixels(x, scale_factor), mm_to_pixels(y, scale_factor)] for x, y in position_history])
     
     # Draw lines connecting consecutive points
     for i in range(len(path_points) - 1):

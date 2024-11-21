@@ -1,13 +1,13 @@
 # Configuration file for the thymio
 
-time_step: 0.1 # s
+time_step: 0.01 # s
 
 # Configuration for the controller
 controller:
   # The angle tolerance in degrees
-  angle_tolerance: 5
+  angle_tolerance: 1
   # The distance tolerance in mm
-  distance_tolerance: 20
+  distance_tolerance: 1
   # The rotation speed scale
   scale_rotation_speed: 50
   # Maximum rotation speed
@@ -21,7 +21,7 @@ controller:
   # thymio speed to mm/s scale
   scale_speed: 0.43478260869565216
   # Threshold for kidnapping in mm
-  kidnap: 20
+  kidnap_threshold: 20
   # max iter before avoid obstacles
   obstacles_max_iter: 5
   # base obstacles avoidance speed
@@ -35,20 +35,20 @@ controller:
    
 # Configuration for the world
 world:
-  width: 760 #mm
-  height: 500 #mm
-  obstacle_min_area: 300 #mm² 
-  aruco_size: 30 #mm
+  width: 280 #mm
+  height: 200 #mm
+  obstacle_min_area: 20 #mm² 
+  aruco_size: 20 #mm
 
 # Configuration for the thymio
 thymio:
   size:
-    width: 120 #mm
-    length: 120 #mm
-  margin: 20 #mm
+    width: 20 #mm
+    length: 20 #mm
+  margin: 5 #mm
 # Configuration for the webcam
 webcam:
-  device_id: 2
+  device_id: 0
   matrix:
     - [1484.14935, 0         , 964.220337]
     - [0         , 1490.50225, 539.531044]
