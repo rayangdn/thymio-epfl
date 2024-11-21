@@ -27,15 +27,13 @@ class GlobalNav:
         self.aruco_mask_size = utils.mm_to_pixels(aruco_size, scale_factor)
         print("GlobalNav Initialized")
     
-    def _create_aruco_mask(self, img, thymio_position, goal_position):
+    def _create_aruco_mask(self, img, thymio_pos, goal_pos):
     
-        if np.any(thymio_position):
-            pos = tuple(map(int, thymio_position))
-            cv2.circle(img, pos, self.aruco_mask_size, 255, -1)
+        pos = tuple(map(int, thymio_pos))
+        cv2.circle(img, pos, self.aruco_mask_size, 255, -1)
             
-        if np.any(goal_position):
-            pos = tuple(map(int, goal_position))
-            cv2.circle(img, pos, self.aruco_mask_size, 255, -1)
+        pos = tuple(map(int, goal_pos))
+        cv2.circle(img, pos, self.aruco_mask_size, 255, -1)
             
         return img
         
@@ -75,7 +73,7 @@ class GlobalNav:
                 
         return extended_corners
     
-    def _detect_contours(self, img, thymio_position, goal_position):
+    def _detect_contours(self, img, thymio_pos, goal_pos):
         img = img.copy()
 
         # Convert to grayscale
@@ -87,7 +85,7 @@ class GlobalNav:
         _, threshold_img = cv2.threshold(blurred_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
         # Create mask to exclude ArUco markers
-        masked_img = self._create_aruco_mask(threshold_img, thymio_position, goal_position)
+        masked_img = self._create_aruco_mask(threshold_img, thymio_pos, goal_pos)
 
         # Apply Canny edge detection
         edges_img = cv2.Canny(masked_img, 50, 150)
@@ -130,13 +128,13 @@ class GlobalNav:
             
         return contour_img, obstacles_corners
     
-    def _compute_trajectory(self, obstacles_corners, thymio_position, goal_position):
+    def _compute_trajectory(self, obstacles_corners, thymio_pos, goal_pos):
         
         path_points = None
         
         # Extract initial and goal positions
-        thymio_pos = tuple(thymio_position)
-        goal_pos = tuple(goal_position)
+        thymio_pos = tuple(thymio_pos)
+        goal_pos = tuple(goal_pos)
         
         # Convert obstacles to list format for pyvisgraph
         obstacles = []
@@ -178,53 +176,62 @@ class GlobalNav:
         
         return path_points
     
-    def get_trajectory(self, img, thymio_position, goal_position):
-        # Check if image is None, thymio and goal positions are not detected
-        if (img is None) or (not np.any(thymio_position)) or not (np.any(goal_position)):
+    def get_trajectory(self, img, thymio_pos, goal_pos):
+        # Check if image is None
+        if img is None:
             return None, None, None, False
         
+        thymio_pos = thymio_pos.copy()
+        goal_pos = goal_pos.copy()
+        
+        # Transform in pixels
+        thymio_pos = np.array([
+                utils.mm_to_pixels(thymio_pos[0], self.scale_factor), 
+                utils.mm_to_pixels(thymio_pos[1], self.scale_factor)
+                ])
+        
+        goal_pos = np.array([
+                utils.mm_to_pixels(goal_pos[0], self.scale_factor), 
+                utils.mm_to_pixels(goal_pos[1], self.scale_factor)
+                ])
+        
         # Detect obstacles
-        trajectory_img, obstacles_corners_pixels = self._detect_contours(img, thymio_position, goal_position)
+        trajectory_img, obstacles_corners= self._detect_contours(img, thymio_pos, goal_pos)
 
         # Compute trajectory
-        trajectory_points_pixels = self._compute_trajectory(obstacles_corners_pixels, thymio_position, goal_position)
+        trajectory_pos = self._compute_trajectory(obstacles_corners, thymio_pos, goal_pos)
         
         # Add thymio and goal positions to the image
-        if np.any(thymio_position):
-            thymio_pos = tuple(map(int, thymio_position)) 
-            cv2.circle(trajectory_img, thymio_pos, 5, (0, 0, 255), -1)
-            text_pos = (thymio_pos[0] + 10, thymio_pos[1] - 10)  
-            cv2.putText(trajectory_img, "Start", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-
-        if np.any(goal_position):
-            goal_pos = tuple(map(int, goal_position))
-            cv2.circle(trajectory_img, goal_pos, 5, (0, 0, 255), -1)
-            text_pos = (goal_pos[0] + 10, goal_pos[1] - 10)  
-            cv2.putText(trajectory_img, "Goal", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                        
-        # Draw trajectory
-        for i in range(len(trajectory_points_pixels) - 1):
-            point1 = tuple(map(int, trajectory_points_pixels[i]))
-            point2 = tuple(map(int, trajectory_points_pixels[i + 1]))
-            cv2.line(trajectory_img, point1, point2, (0, 0, 255), 2)
+        thymio_pos = tuple(map(int, thymio_pos)) 
+        cv2.circle(trajectory_img, thymio_pos, 5, (0, 0, 255), -1)
+        text_pos = (thymio_pos[0] + 10, thymio_pos[1] - 10)  
+        cv2.putText(trajectory_img, "Start", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         
-        obstacles_corners_mm = obstacles_corners_pixels 
-        trajectory_points_mm = np.array(trajectory_points_pixels)
+        goal_pos = tuple(map(int, goal_pos))
+        cv2.circle(trajectory_img, goal_pos, 5, (0, 0, 255), -1)
+        text_pos = (goal_pos[0] + 10, goal_pos[1] - 10)  
+        cv2.putText(trajectory_img, "Goal", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         
-        # Convert obstacles, trajectory points to mm
-        if not obstacles_corners_mm:
-            obstacles_corners_mm = {
+        # Convert to mm
+        if not obstacles_corners:
+            obstacles_corners = {
                 key: np.array([
                     [utils.pixels_to_mm(point[0], self.scale_factor), 
                      utils.pixels_to_mm(point[1], self.scale_factor)]
-                    for point in points]) for key, points in obstacles_corners_mm.items()
+                    for point in points]) for key, points in obstacles_corners.items()
             }
         
-        if trajectory_points_mm.size>=0:
-            trajectory_points_mm = np.array([
+        if trajectory_pos.size>=0:
+            # Draw trajectory
+            for i in range(len(trajectory_pos) - 1):
+                point1 = tuple(map(int, trajectory_pos[i]))
+                point2 = tuple(map(int, trajectory_pos[i + 1]))
+                cv2.line(trajectory_img, point1, point2, (0, 0, 255), 2)
+            # Convert to mm
+            trajectory_pos = np.array([
                 [utils.pixels_to_mm(point[0], self.scale_factor), 
                  utils.pixels_to_mm(point[1], self.scale_factor)] 
-                for point in trajectory_points_mm])
+                for point in trajectory_pos])
             
-        return trajectory_img, trajectory_points_mm, obstacles_corners_mm, True
+        return trajectory_img, trajectory_pos, obstacles_corners, True
     

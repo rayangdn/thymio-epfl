@@ -1,7 +1,8 @@
 # Configuration file for the thymio
 
-# Configuration for the simulation
-simulation: False
+time_step: 0.1 # s
+kidnap: 20 # mm
+
 # Configuration for the controller
 controller:
   # The angle tolerance in degrees

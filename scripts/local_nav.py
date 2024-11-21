@@ -2,13 +2,17 @@ import os
 import yaml
 import numpy as np
 import time
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from utils import utils
 
 class LocalNav():
         def __init__(self, angle_threshold, distance_threshold, scale_rotation_speed, scale_translation_speed, 
                      max_translation_speed, min_translation_speed, max_rotation_speed):
 
             self.current_checkpoint = 0
-            self.thymio_position = None
+            self.thymio_pos = None
             self.thymio_orientation = 0
             self.angle_threshold = angle_threshold
             self.distance_threshold = distance_threshold
@@ -25,9 +29,6 @@ class LocalNav():
             target_angle = np.arctan2(delta[1], delta[0])
             return target_angle
         
-        def _calculate_distance_to_target(self, current_pos, target_pos):
-            return np.linalg.norm(target_pos - current_pos)
-        
         def _calculate_motion_commands(self, angle_diff, distance):
             
             # Calculate rotation speed based on angle difference
@@ -39,7 +40,7 @@ class LocalNav():
             
             # Calculate forward speed based on both distance and angle difference
             # Reduce forward speed when angle difference is large
-            angle_factor = np.cos(angle_diff)  # Will be 1 when aligned, less when not
+            angle_factor = np.cos(angle_diff) 
             distance_factor = np.clip(self.scale_translation_speed*distance/100, self.min_translation_speed, 
                                       self.max_translation_speed)
             
@@ -54,8 +55,8 @@ class LocalNav():
                 target_pos = trajectory_points[self.current_checkpoint]
 
                 # Calculate the distance and the angle to the target
-                target_angle = self._calculate_angle_to_target(self.thymio_position, target_pos)
-                distance = self._calculate_distance_to_target(self.thymio_position, target_pos)
+                target_angle = self._calculate_angle_to_target(self.thymio_pos, target_pos)
+                distance = utils.distance(self.thymio_pos, target_pos)
                 # Calculate angle difference and normalize angle difference to [-pi, pi]
                 angle_diff = (target_angle - self.thymio_orientation + np.pi) % (2 * np.pi) - np.pi
 
@@ -85,17 +86,17 @@ class LocalNav():
                 right_speed = forward_speed - rotation_speed
 
                 command = {
-                    'action': 'move_and_rotate',
+                    'action': 'follow_path',
                     'left_speed': left_speed,
                     'right_speed': right_speed,
                     'current_checkpoint': self.current_checkpoint
                 }
                 return command, False
 
-        def navigate(self, trajectory_points, thymio_position, thymio_orientation):
+        def navigate(self, trajectory_points, thymio_pos, thymio_orientation, sensor_data):
             
             # Update position and orientation
-            self.thymio_position = np.array(thymio_position)
+            self.thymio_pos = np.array(thymio_pos)
             self.thymio_orientation = thymio_orientation
             command, goal_reached = self._trajectory_following(trajectory_points)
 
