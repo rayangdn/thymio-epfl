@@ -171,7 +171,7 @@ class Vision():
             ret, frame = self.cap.read()
             if not ret:
                 print("Error: Couldn't read frame.")
-                return None
+                return None, None, None, None, None
             
             # Undistort the frame
             frame = self._undistort_frame(frame)
