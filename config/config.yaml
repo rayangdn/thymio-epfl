@@ -1,58 +1,65 @@
-# Configuration file for the thymio
+# General settings
+time_step: 0.01  # seconds
 
-time_step: 0.01 # s
+# Physical robot configuration
+thymio:
+  size:
+    width: 20    # mm
+    length: 20   # mm
+  margin: 5      # mm
+  speed_scale: 0.43478260869565216  # thymio speed to mm/s scale
 
-# Configuration for the controller
+# World environment settings
+world:
+  width: 280     # mm
+  height: 200    # mm
+  obstacle_min_area: 20  # mm²
+  aruco_size: 20  # mm
+
+# Motion control parameters
 controller:
-  # The angle tolerance in degrees
-  angle_tolerance: 1
-  # The distance tolerance in mm
-  distance_tolerance: 1
-  # The rotation speed scale
+  # Rotation parameters
+  angle_tolerance: 1     # degrees
   scale_rotation_speed: 50
-  # Maximum rotation speed
   max_rotation_speed: 20
-  # The translation speed scale
+
+  # Translation parameters
+  distance_tolerance: 1  # mm
   scale_translation_speed: 0.004
-  # Minmimum translation speed
   min_translation_speed: 20
-  # Maximum translation speed
   max_translation_speed: 300
-  # thymio speed to mm/s scale
-  scale_speed: 0.43478260869565216
-  # Threshold for kidnapping in mm
-  kidnap_threshold: 20
-  # max iter before avoid obstacles
+
+  # Obstacle avoidance parameters
+  kidnap_threshold: 20   # mm
   obstacles_max_iter: 5
-  # base obstacles avoidance speed
   obstacles_speed: 100
-  # scale factor for proximity sensors
   scale_sensor: 200
-  # weights for obstacle avoidance
+  
+  # Obstacle avoidance weights
   weight_left: [6, 9, -10, -9, -6]
   weight_right: [-6, -9, -10, 9, 6]
 
-   
-# Configuration for the world
-world:
-  width: 280 #mm
-  height: 200 #mm
-  obstacle_min_area: 20 #mm² 
-  aruco_size: 20 #mm
-
-# Configuration for the thymio
-thymio:
-  size:
-    width: 20 #mm
-    length: 20 #mm
-  margin: 5 #mm
-# Configuration for the webcam
+# Camera configuration
 webcam:
   device_id: 0
+  resolution: [1920, 1080]
+  padding: 10    # pixels
+  
+  # Camera calibration matrix
   matrix:
     - [1484.14935, 0         , 964.220337]
     - [0         , 1490.50225, 539.531044]
     - [0         , 0         , 1         ]
+  
+  # Lens distortion parameters
   distortion: [0.154056967, -1.04865202, -0.000689137957, -0.00132248869e-03, 1.48905183]
-  resolution: [1920, 1080]
-  padding: 10 #pixels
+
+# Extended Kalman Filter parameters
+kalman:
+  # Process noise covariance diagonal [x, y, theta, v, w]
+  process_noise: [0.1, 0.1, 0.1, 0.1, 0.1]
+  
+  # Measurement noise covariance diagonals
+  measurement_noise:
+    covered: [9999999, 9999999, 9999999, 0.2, 0.2] # Set camera noise to high values when camera is covered
+    uncovered: [0.1, 0.1, 0.05, 0.05, 0.05] 

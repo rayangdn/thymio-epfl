@@ -107,7 +107,6 @@ class LocalNav():
             # print(f"Rotation speed: {rotation_speed:.2f}")
             # print(f"Current checkpoint: {self.current_checkpoint}")
                 
-            
             left_speed = forward_speed + rotation_speed
             right_speed = forward_speed - rotation_speed
 
@@ -119,7 +118,7 @@ class LocalNav():
             }
             return command, False
 
-    def navigate(self, trajectory_points, thymio_pos, thymio_orientation, sensor_data):
+    def get_command(self, trajectory_points, thymio_pos, thymio_orientation, sensor_data):
         
         # Update position and orientation
         self.thymio_pos = np.array(thymio_pos)

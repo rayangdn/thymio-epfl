@@ -74,60 +74,64 @@ class GlobalNav:
         return extended_corners
     
     def _detect_contours(self, img, thymio_pos, goal_pos):
+        # Store intermediate results
+        visualization_steps = {}
+        
+        # 1. Original image
         img = img.copy()
+        visualization_steps['1. Original'] = img.copy()
 
-        # Convert to grayscale
+        # 2. Grayscale conversion
         gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        visualization_steps['2. Grayscale'] = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
         
-        # Apply Gaussian blur for noise reduction
+        # 3. Gaussian blur
         blurred_img = cv2.GaussianBlur(gray_img, (5, 5), 0)
+        visualization_steps['3. Blurred'] = cv2.cvtColor(blurred_img, cv2.COLOR_GRAY2RGB)
 
+        # 4. Thresholding
         _, threshold_img = cv2.threshold(blurred_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        visualization_steps['4. Threshold'] = cv2.cvtColor(threshold_img, cv2.COLOR_GRAY2RGB)
         
-        # Create mask to exclude ArUco markers
-        masked_img = self._create_aruco_mask(threshold_img, thymio_pos, goal_pos)
+        # 5. ArUco mask
+        masked_img = self._create_aruco_mask(threshold_img.copy(), thymio_pos, goal_pos)
+        visualization_steps['5. ArUco Masked'] = cv2.cvtColor(masked_img, cv2.COLOR_GRAY2RGB)
 
-        # Apply Canny edge detection
+        # 6. Edge detection
         edges_img = cv2.Canny(masked_img, 50, 150)
+        visualization_steps['6. Edges'] = cv2.cvtColor(edges_img, cv2.COLOR_GRAY2RGB)
 
-        # Find contours
+        # 7. Find and draw contours
         contours, _ = cv2.findContours(edges_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Create a copy of the threshold image for drawing
         contour_img = cv2.cvtColor(threshold_img, cv2.COLOR_GRAY2RGB)
-
-        # Dictionary to store corners for each obstacle
+        
         obstacles_corners = {}
 
         for i, contour in enumerate(contours):
-            # Draw the contour
-            
-            # Filter small contours
-            if cv2.contourArea(contour) <= self.obstale_min_area:  # Minimum area threshold
+            if cv2.contourArea(contour) <= self.obstale_min_area:
                 continue
             
             cv2.drawContours(contour_img, [contour], -1, (0, 255, 0), 2)
             
-            # Approximate the contour to find corners
-            epsilon = 0.02 * cv2.arcLength(contour, True)  # Precision parameter
+            epsilon = 0.02 * cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, epsilon, True)
             
-            # Get corners for this contour and filter them
             corners = approx.reshape(-1, 2).astype(np.float32)
             filtered_corners = self._filter_close_corners(corners)
             
             extended_corners = self._extend_obstacles(corners)
     
-            # Store corners in dictionary
             obstacle_name = f"obstacle{i+1}"
             obstacles_corners[obstacle_name] = np.array(extended_corners)
 
-            for corner, extended_corners in zip(filtered_corners, extended_corners):
+            for corner, extended_corner in zip(filtered_corners, extended_corners):
                 cv2.circle(contour_img, tuple(corner.astype(np.int32)), 5, (0, 0, 255), -1)
-                cv2.circle(contour_img, tuple(extended_corners.astype(np.int32)), 5, (255, 0, 0), -1)
-            
-        return contour_img, obstacles_corners
-    
+                cv2.circle(contour_img, tuple(extended_corner.astype(np.int32)), 5, (255, 0, 0), -1)
+        
+        visualization_steps['7. Contours'] = contour_img
+        
+        return contour_img, obstacles_corners, visualization_steps
+
     def _compute_trajectory(self, obstacles_corners, thymio_pos, goal_pos):
         
         path_points = None
@@ -176,15 +180,33 @@ class GlobalNav:
         
         return path_points
     
+    def _display_processing_steps(self, steps):
+        # Calculate grid dimensions
+        n_steps = len(steps)
+        n_cols = 4  # You can adjust this
+        n_rows = (n_steps + n_cols - 1) // n_cols
+
+        # Create figure
+        plt.figure(figsize=(15, 3*n_rows))
+        
+        # Plot each step
+        for idx, (title, img) in enumerate(steps.items(), 1):
+            plt.subplot(n_rows, n_cols, idx)
+            plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB) if len(img.shape) == 3 else img, cmap='gray')
+            plt.title(title)
+            plt.axis('off')
+        
+        plt.tight_layout()
+        plt.show()
+    
     def get_trajectory(self, img, thymio_pos, goal_pos):
-        # Check if image is None
         if img is None:
             return None, None, None, False
         
         thymio_pos = thymio_pos.copy()
         goal_pos = goal_pos.copy()
         
-        # Transform in pixels
+        # Transform to pixels
         thymio_pos = np.array([
                 utils.mm_to_pixels(thymio_pos[0], self.scale_factor), 
                 utils.mm_to_pixels(thymio_pos[1], self.scale_factor)
@@ -195,24 +217,39 @@ class GlobalNav:
                 utils.mm_to_pixels(goal_pos[1], self.scale_factor)
                 ])
         
-        # Detect obstacles
-        trajectory_img, obstacles_corners= self._detect_contours(img, thymio_pos, goal_pos)
+        # Detect obstacles and get visualization steps
+        trajectory_img, obstacles_corners, visualization_steps = self._detect_contours(img, thymio_pos, goal_pos)
 
         # Compute trajectory
         trajectory_pos = self._compute_trajectory(obstacles_corners, thymio_pos, goal_pos)
         
-        # Add thymio and goal positions to the image
-        thymio_pos = tuple(map(int, thymio_pos)) 
-        cv2.circle(trajectory_img, thymio_pos, 5, (0, 0, 255), -1)
-        text_pos = (thymio_pos[0] + 10, thymio_pos[1] - 10)  
-        cv2.putText(trajectory_img, "Start", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        # Create final visualization with trajectory
+        final_img = trajectory_img.copy()
         
-        goal_pos = tuple(map(int, goal_pos))
-        cv2.circle(trajectory_img, goal_pos, 5, (0, 0, 255), -1)
-        text_pos = (goal_pos[0] + 10, goal_pos[1] - 10)  
-        cv2.putText(trajectory_img, "Goal", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        # Add thymio and goal positions
+        thymio_pos_tuple = tuple(map(int, thymio_pos))
+        cv2.circle(final_img, thymio_pos_tuple, 5, (0, 0, 255), -1)
+        text_pos = (thymio_pos_tuple[0] + 10, thymio_pos_tuple[1] - 10)
+        cv2.putText(final_img, "Start", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         
-        # Convert to mm
+        goal_pos_tuple = tuple(map(int, goal_pos))
+        cv2.circle(final_img, goal_pos_tuple, 5, (0, 0, 255), -1)
+        text_pos = (goal_pos_tuple[0] + 10, goal_pos_tuple[1] - 10)
+        cv2.putText(final_img, "Goal", text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        
+        # Draw trajectory
+        if len(trajectory_pos) >= 0:
+            for i in range(len(trajectory_pos) - 1):
+                point1 = tuple(map(int, trajectory_pos[i]))
+                point2 = tuple(map(int, trajectory_pos[i + 1]))
+                cv2.line(final_img, point1, point2, (0, 0, 255), 2)
+        
+        visualization_steps['8. Final Trajectory'] = final_img
+        
+        # Display all processing steps
+        self._display_processing_steps(visualization_steps)
+        
+        # Convert back to mm
         if obstacles_corners:
             obstacles_corners = {
                 key: np.array([
@@ -221,17 +258,10 @@ class GlobalNav:
                     for point in points]) for key, points in obstacles_corners.items()
             }
         
-        if len(trajectory_pos)>=0:
-            # Draw trajectory
-            for i in range(len(trajectory_pos) - 1):
-                point1 = tuple(map(int, trajectory_pos[i]))
-                point2 = tuple(map(int, trajectory_pos[i + 1]))
-                cv2.line(trajectory_img, point1, point2, (0, 0, 255), 2)
-            # Convert to mm
+        if len(trajectory_pos) >= 0:
             trajectory_pos = np.array([
                 [utils.pixels_to_mm(point[0], self.scale_factor), 
                  utils.pixels_to_mm(point[1], self.scale_factor)] 
                 for point in trajectory_pos])
             
-        return trajectory_img, trajectory_pos, obstacles_corners, True
-    
+        return final_img, trajectory_pos, obstacles_corners, True
