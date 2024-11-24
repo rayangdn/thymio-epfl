@@ -99,7 +99,7 @@ class LocalNav():
             
             # Calculate combined motion commands
             forward_speed, rotation_speed = self._calculate_motion_commands(angle_diff, distance)
-            # # Print status
+            # Print status
             # print(f"\nCurrent status:")
             # print(f"Distance to target: {distance:.2f}mm")
             # print(f"Angle difference: {np.degrees(angle_diff):.2f}°")

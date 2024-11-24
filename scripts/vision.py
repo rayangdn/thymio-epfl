@@ -114,19 +114,19 @@ class Vision():
                     goal_position = center
                 
                 # Get name from mapping
-                name = self.MAPPING.get(marker_id, f"Unknown Marker: {marker_id}")
+                # name = self.MAPPING.get(marker_id, f"Unknown Marker: {marker_id}")
                 
                 # Draw background rectangle for better text visibility
-                text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
-                cv2.rectangle(frame, 
-                            (center[0] - 5, center[1] - text_size[1] - 5),
-                            (center[0] + text_size[0] + 5, center[1] + 5),
-                            (0, 0, 0), -1)
+                # text_size = cv2.getTextSize(name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)[0]
+                # cv2.rectangle(frame, 
+                #             (center[0] - 5, center[1] - text_size[1] - 5),
+                #             (center[0] + text_size[0] + 5, center[1] + 5),
+                #             (0, 0, 0), -1)
                 
-                cv2.putText(frame, name, 
-                            (center[0], center[1]),
-                            cv2.FONT_HERSHEY_SIMPLEX, 
-                            0.5, (0, 0, 255), 2)
+                # cv2.putText(frame, name, 
+                #             (center[0], center[1]),
+                #             cv2.FONT_HERSHEY_SIMPLEX, 
+                #             0.5, (0, 0, 255), 2)
                 
                 # Draw lines between corners if all are detected to define the world
                 if np.all(corner_positions):  # Check if all corners have been detected

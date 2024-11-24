@@ -103,7 +103,7 @@ class GlobalNav:
 
         # 7. Find and draw contours
         contours, _ = cv2.findContours(edges_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contour_img = cv2.cvtColor(threshold_img, cv2.COLOR_GRAY2RGB)
+        contour_img = cv2.cvtColor(masked_img, cv2.COLOR_GRAY2RGB)
         
         obstacles_corners = {}
 

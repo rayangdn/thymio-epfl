@@ -1,47 +1,49 @@
 # General settings
-time_step: 0.01  # seconds
+time_step: 0.1  # seconds
 
 # Physical robot configuration
 thymio:
   size:
-    width: 20    # mm
-    length: 20   # mm
-  margin: 5      # mm
-  speed_scale: 0.43478260869565216  # thymio speed to mm/s scale
+    width: 110   # mm
+    length: 110   # mm
+    wheel_distance: 90  # mm
+    wheel_radius: 20    # mm
+  security_margin: 40     # mm
+  speed_scale: 3.180 # thymio speed to mm/s scale
 
 # World environment settings
 world:
-  width: 280     # mm
-  height: 200    # mm
-  obstacle_min_area: 20  # mm²
-  aruco_size: 20  # mm
+  width: 700     # mm
+  height: 580    # mm
+  obstacle_min_area: 500  # mm²
+  aruco_size: 50  # mm
 
 # Motion control parameters
 controller:
   # Rotation parameters
-  angle_tolerance: 1     # degrees
-  scale_rotation_speed: 50
-  max_rotation_speed: 20
+  angle_tolerance: 5     # degrees
+  scale_rotation_speed: 90
+  max_rotation_speed: 100
 
   # Translation parameters
-  distance_tolerance: 1  # mm
-  scale_translation_speed: 0.004
-  min_translation_speed: 20
-  max_translation_speed: 300
+  distance_tolerance: 20  # mm
+  scale_translation_speed: 0.5
+  min_translation_speed: 50
+  max_translation_speed: 120
 
   # Obstacle avoidance parameters
-  kidnap_threshold: 20   # mm
+  kidnap_threshold: 40   # mm
   obstacles_max_iter: 5
   obstacles_speed: 100
   scale_sensor: 200
   
   # Obstacle avoidance weights
-  weight_left: [6, 9, -10, -9, -6]
-  weight_right: [-6, -9, -10, 9, 6]
+  weight_left: [4, 6, -8, -6, -4]
+  weight_right: [-4, -6, -8, 6, -4]
 
 # Camera configuration
 webcam:
-  device_id: 0
+  device_id: 2
   resolution: [1920, 1080]
   padding: 10    # pixels
   
