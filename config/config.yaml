@@ -13,15 +13,15 @@ thymio:
 
 # World environment settings
 world:
-  width: 700     # mm
-  height: 580    # mm
+  width: 630     # mm
+  height: 520    # mm
   obstacle_min_area: 500  # mm²
   aruco_size: 50  # mm
 
 # Motion control parameters
 controller:
   # Rotation parameters
-  angle_tolerance: 5     # degrees
+  angle_tolerance: 3     # degrees
   scale_rotation_speed: 90
   max_rotation_speed: 100
 
