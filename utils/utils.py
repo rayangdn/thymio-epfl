@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from IPython.display import clear_output, Image, display
+from scipy.stats import chi2
 
 def add_label(image, text):
     label_image = image.copy()
@@ -33,7 +34,14 @@ def simulate_robot_movement(position, orientation, command, dt=0.005):
     return new_position, new_orientation
 
 # Draw robot as rectangle
-def draw_robot(frame, position, orientation, thymio_size):
+def draw_robot(frame, position, orientation, thymio_size, scale_factor):
+    thymio_size = thymio_size.copy()
+    position = position.copy()
+    thymio_size = np.array([mm_to_pixels(thymio_size['width'], scale_factor), 
+                            mm_to_pixels(thymio_size['length'], scale_factor)])
+    position = np.array([mm_to_pixels(position[0], scale_factor), 
+                         mm_to_pixels(position[1], scale_factor)])
+    
     width = thymio_size[0]
     length = thymio_size[1]
     
@@ -72,21 +80,48 @@ def draw_robot(frame, position, orientation, thymio_size):
 
     return frame
 
-def draw_trajectory(frame, position_history):
+def draw_trajectory(frame, position_history, scale_factor, color):
     if len(position_history) <= 1:
         return frame
         
-    path_points = np.array(position_history)
+    path_points = np.array([[mm_to_pixels(x, scale_factor), mm_to_pixels(y, scale_factor)] for x, y in position_history])
     
     # Draw lines connecting consecutive points
     for i in range(len(path_points) - 1):
         pt1 = tuple(path_points[i].astype(int))
         pt2 = tuple(path_points[i + 1].astype(int))
-        cv2.line(frame, pt1, pt2, (0, 255, 255), 2)
+        cv2.line(frame, pt1, pt2, color, 2)
     
     for point in path_points:
-        cv2.circle(frame, tuple(point.astype(int)), 3, (0, 255, 255), -1)
+        cv2.circle(frame, tuple(point.astype(int)), 3, color, -1)
             
+    return frame
+
+def draw_uncertainty_ellipse(frame, position, covariance, scale_factor, confidence=0.95, color=(0, 255, 255)):
+    
+    # Get chi-square value for desired confidence level
+    chi2_val = chi2.ppf(confidence, df=2)
+    
+    # Calculate eigenvalues and eigenvectors of covariance matrix
+    eigenvals, eigenvecs = np.linalg.eigh(covariance)
+    
+    # Calculate ellipse parameters
+    angle = np.degrees(np.arctan2(eigenvecs[1, 0], eigenvecs[0, 0]))
+    axes_lengths = np.sqrt(chi2_val * eigenvals)
+    
+    # Convert position to pixel coordinates 
+    pixel_pos = np.array([mm_to_pixels(position[0], scale_factor), mm_to_pixels(position[1], scale_factor)])
+    
+    # Draw ellipse
+    cv2.ellipse(frame, 
+                center=tuple(map(int, pixel_pos)),
+                axes=tuple(map(int, axes_lengths)),
+                angle=angle,
+                startAngle=0,
+                endAngle=360,
+                color=color,
+                thickness=1)
+    
     return frame
 
 def display_frames(original_frame, processed_frame, trajectory_frame):
