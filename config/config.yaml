@@ -13,7 +13,7 @@ thymio:
 
 # World environment settings
 world:
-  width: 630     # mm
+  width: 760     # mm
   height: 520    # mm
   obstacle_min_area: 500  # mm²
   aruco_size: 50  # mm

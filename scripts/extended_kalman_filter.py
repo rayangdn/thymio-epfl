@@ -35,7 +35,7 @@ class ExtendedKalmanFilter():
         
     def predict(self, control_input, dt):
         
-         # Calculate Jacobian of state transition function
+        # Calculate Jacobian of state transition function
         v = control_input[0]
         theta = self.state[2]
         F = np.array([
