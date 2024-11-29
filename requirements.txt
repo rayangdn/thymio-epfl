@@ -11,3 +11,4 @@ tqdm>=4.65.0
 tdmclient>=0.1.21
 tk-tools>=0.16.0
 scipy>=1.7.0
+tqdm>=4.65.0

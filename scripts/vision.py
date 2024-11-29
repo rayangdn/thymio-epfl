@@ -51,6 +51,7 @@ class Vision():
         if not self.cap.isOpened():
             print("Error: Could not open camera.")
             return False
+        
         return True
     
     def cleanup_webcam(self):
@@ -173,6 +174,11 @@ class Vision():
 
     def get_frame(self):
         if self.cap is not None:
+            
+            # Flush the buffer by reading multiple frames
+            for _ in range(5):  # Read 5 frames to clear buffer
+                self.cap.grab()
+                
             ret, frame = self.cap.read()
             if not ret:
                 print("Error: Couldn't read frame.")
