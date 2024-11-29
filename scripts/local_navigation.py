@@ -1,36 +1,41 @@
-import os
-import yaml
 import numpy as np
 import time
 import sys
+import os
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils import utils
 
-class LocalNav():
-    def __init__(self, angle_threshold, distance_threshold, scale_rotation_speed, scale_translation_speed, 
-                    max_translation_speed, min_translation_speed, max_rotation_speed, obstacles_max_iter,
-                    obstacles_speed, scale_sensor, weight_left, weight_right):
+# Rotation parameters
+ANGLE_TOLERANCE = 3 # degrees
+KP_ROTATION = 90
+MAX_ROTATION_SPEED = 150
 
+# Translation parameters
+DISTANCE_TOLERANCE = 50 # mm
+KP_TRANSLATION = 0.7 
+MIN_TRANSLATION_SPEED = 100
+MAX_TRANSLATION_SPEED = 200
+
+# Obstacle avoidance parameters
+OBSTACLES_MAX_ITER = 7
+OBSTACLES_SPEED = 100
+SCALE_SENSOR = 100
+WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]
+WEIGHT_RIGHT = [-5, -8, -10, 8,  5]
+
+class LocalNav():
+    
+    def __init__(self):
         self.current_checkpoint = 0
         self.thymio_pos = None
         self.thymio_orientation = 0
-        self.angle_threshold = angle_threshold
-        self.distance_threshold = distance_threshold
-        self.scale_rotation_speed = scale_rotation_speed
-        self.max_rotation_speed = max_rotation_speed
-        self.scale_translation_speed = scale_translation_speed
-        self.max_translation_speed = max_translation_speed
-        self.min_translation_speed = min_translation_speed
         self.obstacles_iter = 0
-        self.obstacles_max_iter = obstacles_max_iter
-        self.obstacles_speed = obstacles_speed
-        self.scale_sensor = scale_sensor
-        self.weight_left = weight_left
-        self.weight_right = weight_right
         
-        print("LocalNav Initialized")
-
+        print("LocalNav initialized correctly.")
+        
+    #----------------------------------------#
+    
     def _detect_obstacles(self,sensor_data):
         return sum(sensor_data) > 0
     
@@ -43,16 +48,16 @@ class LocalNav():
         
         # Calculate rotation speed based on angle difference
         # The bigger the difference, the slower the forward motion
-        if abs(angle_diff) < self.angle_threshold:
+        if abs(angle_diff) < np.deg2rad(ANGLE_TOLERANCE):
             rotation_speed = 0
         else: 
-            rotation_speed = np.clip(self.scale_rotation_speed*angle_diff, -self.max_rotation_speed, self.max_rotation_speed)
+            rotation_speed = np.clip(KP_ROTATION*angle_diff, -MAX_ROTATION_SPEED, MAX_ROTATION_SPEED)
         
         # Calculate forward speed based on both distance and angle difference
-        # Reduce forward speed when angle difference is large
+        # Reduce forward speed when angle difference is large or distance is small
         angle_factor = np.cos(angle_diff) 
-        distance_factor = np.clip(self.scale_translation_speed*distance, self.min_translation_speed, 
-                                    self.max_translation_speed)
+        distance_factor = np.clip(KP_TRANSLATION*distance, MIN_TRANSLATION_SPEED, 
+                                    MAX_TRANSLATION_SPEED)
         
         forward_speed = distance_factor * max(0, angle_factor)
         
@@ -64,13 +69,13 @@ class LocalNav():
 
         # Updates speed based on sensor data and their corresponding weights
         for i in range(len(sensor_data) - 2):
-            left_speed = left_speed + sensor_data[i] * self.weight_left[i] / self.scale_sensor
-            right_speed = right_speed + sensor_data[i] * self.weight_right[i] / self.scale_sensor
+            left_speed = left_speed + sensor_data[i] * WEIGHT_LEFT[i] / SCALE_SENSOR
+            right_speed = right_speed + sensor_data[i] * WEIGHT_RIGHT[i] / SCALE_SENSOR
 
         command = {
                 'action': 'avoid_obstacles',
-                'left_speed': int(left_speed + self.obstacles_speed),
-                'right_speed': int(right_speed + self.obstacles_speed)
+                'left_speed': int(left_speed + OBSTACLES_SPEED),
+                'right_speed': int(right_speed + OBSTACLES_SPEED)
             }
         return command, False
     
@@ -87,7 +92,7 @@ class LocalNav():
             angle_diff = (target_angle - self.thymio_orientation + np.pi) % (2 * np.pi) - np.pi
 
             # Check if we've reached the target
-            if distance < self.distance_threshold:
+            if distance < DISTANCE_TOLERANCE:
                 self.current_checkpoint += 1
                 if self.current_checkpoint >= len(trajectory_points):
                     command = {
@@ -100,15 +105,15 @@ class LocalNav():
             # Calculate combined motion commands
             forward_speed, rotation_speed = self._calculate_motion_commands(angle_diff, distance)
             # Print status
-            # print(f"\nCurrent status:")
-            # print(f"Distance to target: {distance:.2f}mm")
-            # print(f"Angle difference: {np.degrees(angle_diff):.2f}°")
-            # print(f"Forward speed: {forward_speed:.2f}")
-            # print(f"Rotation speed: {rotation_speed:.2f}")
-            # print(f"Current checkpoint: {self.current_checkpoint}")
+            print(f"\nCurrent status:")
+            print(f"Distance to target: {distance:.2f}mm")
+            print(f"Angle difference: {np.degrees(angle_diff):.2f}°")
+            print(f"Forward speed: {forward_speed:.2f}")
+            print(f"Rotation speed: {rotation_speed:.2f}")
+            print(f"Current checkpoint: {self.current_checkpoint}")
                 
             left_speed = forward_speed + rotation_speed
-            right_speed = forward_speed - rotation_speed
+            right_speed = forward_speed -rotation_speed
 
             command = {
                 'action': 'follow_path',
@@ -117,20 +122,21 @@ class LocalNav():
                 'current_checkpoint': self.current_checkpoint
             }
             return command, False
-
-    def get_command(self, trajectory_points, thymio_pos, thymio_orientation, sensor_data):
+    
+    #----------------------------------------#
+        
+    def get_command(self, trajectory_points, thymio_pos, sensor_data):
         
         # Update position and orientation
-        self.thymio_pos = np.array(thymio_pos)
-        self.thymio_orientation = thymio_orientation
+        self.thymio_pos = np.array(thymio_pos[:2])
+        self.thymio_orientation = thymio_pos[2]
         
         if self._detect_obstacles(sensor_data):
-            self.obstacles_iter = min(self.obstacles_iter + 1, self.obstacles_max_iter)
-            command, goal_reached = (
-                self._avoid_obstacles(sensor_data) if self.obstacles_iter >= self.obstacles_max_iter
-                else self._trajectory_following(trajectory_points)
-            )
+            # If obstacles are detected, start avoiding them
+            self.obstacles_iter = OBSTACLES_MAX_ITER
+            command, goal_reached =self._avoid_obstacles(sensor_data) 
         else:
+            # If no obstacles are detected, follow the trajectory
             self.obstacles_iter = max(self.obstacles_iter - 1, 0)
             command, goal_reached = (
                 self._trajectory_following(trajectory_points) if self.obstacles_iter == 0

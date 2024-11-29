@@ -1,7 +1,17 @@
-import numpy as np
 import cv2
+import numpy as np
+import matplotlib.pyplot as plt
 from IPython.display import clear_output, Image, display
-from scipy.stats import chi2
+
+
+def distance(p1, p2):
+    return np.sqrt(((p1[0] - p2[0]) ** 2) + ((p1[1] - p2[1]) ** 2))
+
+def mm_to_pixels(number, scale_factor):
+    return int(number * scale_factor)
+
+def pixels_to_mm(number, scale_factor):
+    return number / scale_factor
 
 def add_label(image, text):
     label_image = image.copy()
@@ -12,119 +22,7 @@ def add_label(image, text):
                 0.7, (255, 255, 255), 2)
     return label_image
 
-def distance(p1, p2):
-    return np.sqrt(((p1[0] - p2[0]) ** 2) + ((p1[1] - p2[1]) ** 2))
-    
-def mm_to_pixels(number, scale_factor):
-    return int(number * scale_factor)
-
-def pixels_to_mm(number, scale_factor):
-    return number / scale_factor
-
-def simulate_robot_movement(position, orientation, command, dt=0.005):
-    new_position = np.array(position, dtype=np.float64)
-    new_orientation = float(orientation)  
-    if command['action'] == 'move_and_rotate':
-        # Update orientation
-        new_orientation += command['rotation_speed'] * dt
-        # Update position based on forward movement in the current orientation
-        new_position[0] += command['forward_speed'] * np.cos(new_orientation) * dt  
-        new_position[1] += command['forward_speed'] * np.sin(new_orientation) * dt
-    
-    return new_position, new_orientation
-
-# Draw robot as rectangle
-def draw_robot(frame, position, orientation, thymio_size, scale_factor):
-    thymio_size = thymio_size.copy()
-    position = position.copy()
-    thymio_size = np.array([mm_to_pixels(thymio_size['width'], scale_factor), 
-                            mm_to_pixels(thymio_size['length'], scale_factor)])
-    position = np.array([mm_to_pixels(position[0], scale_factor), 
-                         mm_to_pixels(position[1], scale_factor)])
-    
-    width = thymio_size[0]
-    length = thymio_size[1]
-    
-    # Calculate corner points of rectangle based on center position and orientation
-    center = np.array(position, dtype=np.float32)
-    
-    # Create rotation matrix
-    angle = orientation  # orientation should be in radians
-    rotation_matrix = np.array([
-        [np.cos(angle), -np.sin(angle)],
-        [np.sin(angle), np.cos(angle)]
-    ])
-    
-    # Define corners relative to center (before rotation)
-    half_length = length / 2
-    half_width = width / 2
-    corners_rel = np.array([
-        [-half_length, -half_width],  # top-left
-        [half_length, -half_width],   # top-right
-        [half_length, half_width],    # bottom-right
-        [-half_length, half_width]    # bottom-left
-    ])
-    
-    # Rotate corners and add center position
-    corners = np.array([
-        rotation_matrix @ corner + center for corner in corners_rel
-    ], dtype=np.int32)
-    
-    # Draw filled rectangle
-    cv2.fillPoly(frame, [corners], (255, 0, 255))
-    
-    # Draw direction indicator (front of robot)
-    front_start = center
-    front_end = center + rotation_matrix @ np.array([length/2, 0])
-    cv2.line(frame, tuple(front_start.astype(int)), tuple(front_end.astype(int)), (255, 255, 0), 2) 
-
-    return frame
-
-def draw_trajectory(frame, position_history, scale_factor, color):
-    if len(position_history) <= 1:
-        return frame
-        
-    path_points = np.array([[mm_to_pixels(x, scale_factor), mm_to_pixels(y, scale_factor)] for x, y in position_history])
-    
-    # Draw lines connecting consecutive points
-    for i in range(len(path_points) - 1):
-        pt1 = tuple(path_points[i].astype(int))
-        pt2 = tuple(path_points[i + 1].astype(int))
-        cv2.line(frame, pt1, pt2, color, 2)
-    
-    for point in path_points:
-        cv2.circle(frame, tuple(point.astype(int)), 3, color, -1)
-            
-    return frame
-
-def draw_uncertainty_ellipse(frame, position, covariance, scale_factor, confidence=0.95, color=(0, 255, 255)):
-    
-    # Get chi-square value for desired confidence level
-    chi2_val = chi2.ppf(confidence, df=2)
-    
-    # Calculate eigenvalues and eigenvectors of covariance matrix
-    eigenvals, eigenvecs = np.linalg.eigh(covariance)
-    
-    # Calculate ellipse parameters
-    angle = np.degrees(np.arctan2(eigenvecs[1, 0], eigenvecs[0, 0]))
-    axes_lengths = np.sqrt(chi2_val * eigenvals)
-    
-    # Convert position to pixel coordinates 
-    pixel_pos = np.array([mm_to_pixels(position[0], scale_factor), mm_to_pixels(position[1], scale_factor)])
-    
-    # Draw ellipse
-    cv2.ellipse(frame, 
-                center=tuple(map(int, pixel_pos)),
-                axes=tuple(map(int, axes_lengths)),
-                angle=angle,
-                startAngle=0,
-                endAngle=360,
-                color=color,
-                thickness=1)
-    
-    return frame
-
-def display_frames(original_frame, processed_frame, trajectory_frame):
+def display_frames(original_frame=None, processed_frame=None, trajectory_frame=None):
     frames = []
     frame_labels = ["Original Frame", "Processed Frame", "Trajectory Frame"]
     input_frames = [original_frame, processed_frame, trajectory_frame]
@@ -133,9 +31,9 @@ def display_frames(original_frame, processed_frame, trajectory_frame):
     for frame, label in zip(input_frames, frame_labels):
         if frame is not None:
             # Convert to RGB
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+           # frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             # Add label
-            labeled_frame = add_label(frame_rgb, label)
+            labeled_frame = add_label(frame, label)
             frames.append(labeled_frame)
     
     if not frames:  # If no valid frames
@@ -163,3 +61,109 @@ def display_frames(original_frame, processed_frame, trajectory_frame):
     display(Image(data=buffer.tobytes()))
     clear_output(wait=True)
 
+def display_processing_steps(steps):
+    # Define number of columns and rows
+    n_cols = 2
+    n_rows = 2
+    # Create figure
+    plt.figure(figsize=(15, 9))
+    
+    # Plot each step
+    for idx, (title, img) in enumerate(steps.items(), 1):
+        plt.subplot(n_rows, n_cols, idx)
+        plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB) if len(img.shape) == 3 else img, cmap='gray')
+        plt.title(title)
+        plt.axis('off')
+    
+    plt.tight_layout()
+    plt.show()
+    clear_output(wait=True)
+
+# Draw robot as rectangle
+def draw_robot(frame, position, thymio_width, thymio_length, scale_factor):
+    position = position.copy()
+    orientation = position[2]
+    
+    # Convert position and dimensions to pixels
+    thymio_width = mm_to_pixels(thymio_width, scale_factor)
+    thymio_length = mm_to_pixels(thymio_length, scale_factor) 
+    position = np.array([mm_to_pixels(position[0], scale_factor), 
+                         mm_to_pixels(position[1], scale_factor)])
+    
+    # Calculate corner points of rectangle based on center position and orientation
+    center = np.array(position, dtype=np.float32)
+    
+    # Create rotation matrix
+    angle = orientation  # orientation should be in radians
+    rotation_matrix = np.array([
+        [np.cos(angle), -np.sin(angle)],
+        [np.sin(angle), np.cos(angle)]
+    ])
+    
+    # Define corners relative to center (before rotation)
+    half_length = thymio_length / 2
+    half_width = thymio_width / 2
+    corners_rel = np.array([
+        [-half_length, -half_width],  # top-left
+        [half_length, -half_width],   # top-right
+        [half_length, half_width],    # bottom-right
+        [-half_length, half_width]    # bottom-left
+    ])
+    
+    # Rotate corners and add center position
+    corners = np.array([
+        rotation_matrix @ corner + center for corner in corners_rel
+    ], dtype=np.int32)
+    
+    # Draw filled rectangle
+    cv2.fillPoly(frame, [corners], (255, 0, 255))
+    
+    # Draw direction indicator (front of robot)
+    front_start = center
+    front_end = center + rotation_matrix @ np.array([thymio_length/2, 0])
+    cv2.line(frame, tuple(front_start.astype(int)), tuple(front_end.astype(int)), (0, 255, 255), 2) 
+
+    return frame
+
+def draw_trajectory(frame, position_history, scale_factor, color):
+    if len(position_history) <= 1:
+        return frame
+        
+    path_points = np.array([[mm_to_pixels(x, scale_factor), mm_to_pixels(y, scale_factor)] for x, y in position_history])
+    
+    # Draw lines connecting consecutive points
+    for i in range(len(path_points) - 1):
+        pt1 = tuple(path_points[i].astype(int))
+        pt2 = tuple(path_points[i + 1].astype(int))
+        cv2.line(frame, pt1, pt2, color, 2)
+    
+    for point in path_points:
+        cv2.circle(frame, tuple(point.astype(int)), 3, color, -1)
+            
+    return frame 
+        
+def print_status(obstacles_pos, thymio_pos, goal_pos, trajectory):
+    # Print obstacles information
+    print("\n=== Obstacles Information ===")
+    print(f"Number of obstacles detected: {len(obstacles_pos)}")
+    print("Obstacle coordinates [mm]:")
+    for i, (_, corners) in enumerate(obstacles_pos.items()):
+        formatted_corners = "\n    ".join([f"Corner {i+1}: [{x:.1f}, {y:.1f}]" 
+                                         for i, (x, y) in enumerate(corners)])
+        print(f"\nObstacle {i+1}:\n    {formatted_corners}")
+
+    # Print Thymio information
+    print("\n=== Thymio Information ===")
+    print(f"Position [mm]: [{thymio_pos[0]:.1f}, {thymio_pos[1]:.1f}]")
+    print(f"Orientation [°]: {np.rad2deg(thymio_pos[2]):.1f}")
+
+    # Print Goal information
+    print("\n=== Goal Information ===")
+    print(f"Position [mm]: [{goal_pos[0]:.1f}, {goal_pos[1]:.1f}]")
+
+    # Print Trajectory information
+    print("\n=== Trajectory Information ===")
+    print(f"Number of waypoints: {len(trajectory)}")
+    print("Waypoint path [mm]:")
+    for i, point in enumerate(trajectory):
+        print(f"Checkpoint {i+1}: [{point[0]:.1f}, {point[1]:.1f}]")
