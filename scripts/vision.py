@@ -63,11 +63,6 @@ class Vision():
     
     def _get_original_frame(self):
         if self.cap is not None:
-            
-            # Flush the buffer by reading multiple frames
-            # for _ in range(5):  # Read 5 frames to clear buffer
-            #     self.cap.grab()
-                
             ret, frame = self.cap.read()
             if not ret:
                 print("Error: Could not read frame.")
@@ -148,6 +143,7 @@ class Vision():
                     # Draw a circle at the center for visualization
                     cv2.circle(frame, start_point, 3, (0, 0, 255), -1)
                     
+                    # Draw a line from the center to the front edge for visualization
                     cv2.arrowedLine(frame, start_point, end_point, (0, 255, 0), 2)
                     cv2.circle(frame, start_point, 3, (0, 0, 255), -1)
         
@@ -345,6 +341,12 @@ class Vision():
             
         return frame, goal_pos, found_goal
     
+    def flush(self):
+        if self.cap is not None:
+            # Flush the buffer by reading multiple frames
+            for _ in range(5):  # Read 5 frames to clear buffer
+                self.cap.grab()
+                
     def connect_webcam(self):
         # Connect to the webcam
         self.cap = cv2.VideoCapture(self.device_id)

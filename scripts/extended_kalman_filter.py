@@ -1,9 +1,9 @@
 import numpy as np
 
 # Values obtain in run_tests.ipynb
-Q = np.diag([0.1, 0.1, 0.1, 0.1, 0.1])
-R_COVERED = np.diag([9999999, 9999999, 9999999, 71.4096, 246.1112]) # No measurement from camera
-R_UNCOVERED = np.diag([0.08497380, 0.11697213, 0.00000717, 71.4096, 246.1112])
+Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
+R_COVERED = np.diag([9999999, 9999999, 9999999, 35.8960, 154.1675]) # No measurement from camera
+R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 35.8960, 154.1675])
 
 class ExtendedKalmanFilter:
     def __init__(self, dt, wheel_base):
@@ -22,7 +22,7 @@ class ExtendedKalmanFilter:
         self.Q = Q
         
         # Measurement noise covariance
-        self.R = R_COVERED
+        self.R = R_UNCOVERED
         
         # Initialize state vector
         self.state = np.zeros(self.n)
@@ -33,8 +33,8 @@ class ExtendedKalmanFilter:
     
     def _compute_velocity(self, v_l, v_r):
         # Compute linear and angular velocities from wheel speeds
-        v = (v_r + v_l) / 2
-        omega = (v_r - v_l) / self.wheel_base
+        v = (v_l + v_r) / 2
+        omega = (v_l - v_r) / self.wheel_base
         return v, omega
     #------------------------------------------#
     
@@ -92,7 +92,8 @@ class ExtendedKalmanFilter:
         
         # Update state and covariance
         y = measurement - self.state
-        # Normalize angle difference
+        
+        # Normalize angle difference [-pi, pi]
         y[2] = np.arctan2(np.sin(y[2]), np.cos(y[2]))
         
         self.state = self.state + K @ y

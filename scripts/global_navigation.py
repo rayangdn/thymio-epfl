@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils import utils
 
 # Security margin to avoid obstacles
-SECURITY_MARGIN = 30 #mm
+SECURITY_MARGIN = 60 #mm
 
 class GlobalNav:
     
@@ -24,6 +24,7 @@ class GlobalNav:
             # For each corner point
             extended_corners = np.zeros_like(corners)
             for i in range(len(corners)):
+                
                 # Get vector from center to corner
                 vector = corners[i] - center
                 
@@ -32,8 +33,8 @@ class GlobalNav:
                 if length > 0:
                     normalized_vector = vector / length
                     
-                    # Move the corner point outward by the width/2 of the thymio
-                    extended_corners[i] = corners[i] + normalized_vector * (thymio_width//2+ SECURITY_MARGIN) 
+                    # Move the corner point outward by the width/2 of the thymio + security margin
+                    extended_corners[i] = corners[i] + normalized_vector * (thymio_width//2 + SECURITY_MARGIN) 
                     
             return extended_corners
         
@@ -49,6 +50,7 @@ class GlobalNav:
         obstacles = []
         for obstacle_key in obstacles_pos:
             obstacle_points = obstacles_pos[obstacle_key]
+            
             # Convert numpy array points to list of tuples
             obstacle = [tuple(point) for point in obstacle_points]
             obstacles.append(obstacle)
@@ -83,7 +85,7 @@ class GlobalNav:
         
         path_points = [np.array([point.x,point.y]) for point in shortest_path]
         
-        return path_points
+        return path_points # Skip the first point (Thymio position)
     
     #----------------------------------------#
     
@@ -114,16 +116,18 @@ class GlobalNav:
                 
         trajectory_img = img.copy()
         found_trajectory = False
+        
         # Compute trajectory using visibility graph
         path_points = self._compute_trajectory(extended_obstacles, thymio_pos[:2], goal_pos)
         
         if path_points is not None:
             found_trajectory = True
-            print("\nTrajectory found! Number of waypoints:", len(path_points))
+            print("\nTrajectory found! Number of waypoints:", len(path_points)-1)
             print("\nWaypoint path [mm]:")
             for i, point in enumerate(path_points):
-                print(f"Checkpoint {i+1}: ({point[0]:.1f}, {point[1]:.1f})")
-            
+                if i > 0:
+                    print(f"Waypoint {i}: {point}")
+  
             # Convert path points from mm to pixels
             path_points_pixels = []
             for point in path_points:
@@ -151,5 +155,5 @@ class GlobalNav:
             cv2.putText(trajectory_img, 'GOAL', 
                     (path_points_int[-1][0] + 10, path_points_int[-1][1] + 10), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-        
-        return trajectory_img, path_points, found_trajectory
+ 
+        return trajectory_img, path_points[1:], found_trajectory

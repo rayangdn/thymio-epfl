@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils import utils
 
 # Rotation parameters
-ANGLE_TOLERANCE = 3 # degrees
+ANGLE_TOLERANCE = 5 # degrees
 KP_ROTATION = 90
 MAX_ROTATION_SPEED = 150
 
@@ -20,7 +20,7 @@ MAX_TRANSLATION_SPEED = 200
 # Obstacle avoidance parameters
 OBSTACLES_MAX_ITER = 7
 OBSTACLES_SPEED = 100
-SCALE_SENSOR = 100
+SCALE_SENSOR = 200
 WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]
 WEIGHT_RIGHT = [-5, -8, -10, 8,  5]
 
@@ -88,6 +88,7 @@ class LocalNav():
             # Calculate the distance and the angle to the target
             target_angle = self._calculate_angle_to_target(self.thymio_pos, target_pos)
             distance = utils.distance(self.thymio_pos, target_pos)
+            
             # Calculate angle difference and normalize angle difference to [-pi, pi]
             angle_diff = (target_angle - self.thymio_orientation + np.pi) % (2 * np.pi) - np.pi
 
@@ -105,12 +106,12 @@ class LocalNav():
             # Calculate combined motion commands
             forward_speed, rotation_speed = self._calculate_motion_commands(angle_diff, distance)
             # Print status
-            print(f"\nCurrent status:")
-            print(f"Distance to target: {distance:.2f}mm")
-            print(f"Angle difference: {np.degrees(angle_diff):.2f}°")
-            print(f"Forward speed: {forward_speed:.2f}")
-            print(f"Rotation speed: {rotation_speed:.2f}")
-            print(f"Current checkpoint: {self.current_checkpoint}")
+            # print(f"\nCurrent status:")
+            # print(f"Distance to target: {distance:.2f}mm")
+            # print(f"Angle difference: {np.degrees(angle_diff):.2f}°")
+            # print(f"Forward speed: {forward_speed:.2f}")
+            # print(f"Rotation speed: {rotation_speed:.2f}")
+            # print(f"Current checkpoint: {self.current_checkpoint}")
                 
             left_speed = forward_speed + rotation_speed
             right_speed = forward_speed -rotation_speed
@@ -130,6 +131,9 @@ class LocalNav():
         # Update position and orientation
         self.thymio_pos = np.array(thymio_pos[:2])
         self.thymio_orientation = thymio_pos[2]
+        
+        # Get front sensor data
+        sensor_data = sensor_data[:5]
         
         if self._detect_obstacles(sensor_data):
             # If obstacles are detected, start avoiding them
