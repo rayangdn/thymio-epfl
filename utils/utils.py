@@ -141,7 +141,29 @@ def draw_trajectory(frame, position_history, scale_factor, color):
         cv2.circle(frame, tuple(point.astype(int)), 3, color, -1)
             
     return frame 
+
+def update_visualization_frame(trajectory_frame, position_history, filtered_history, 
+                             robot_state, width, length, scale_factor):
+
+    if trajectory_frame is None:
+        return None
         
+    current_frame = trajectory_frame.copy()
+    
+    # Draw measured trajectory in red
+    current_frame = draw_trajectory(current_frame, position_history, 
+                                    scale_factor, color=(255, 0, 0))
+    
+    # Draw filtered trajectory in yellow
+    current_frame = draw_trajectory(current_frame, filtered_history, 
+                                    scale_factor, color=(255, 255, 0))
+    
+    # Draw robot using filtered position
+    current_frame = draw_robot(current_frame, robot_state[:3], width, 
+                               length, scale_factor)
+    
+    return current_frame
+       
 def print_status(obstacles_pos, thymio_pos, goal_pos, trajectory):
     # Print obstacles information
     print("\n=== Obstacles Information ===")
@@ -167,3 +189,4 @@ def print_status(obstacles_pos, thymio_pos, goal_pos, trajectory):
     print("Waypoint path [mm]:")
     for i, point in enumerate(trajectory):
         print(f"Checkpoint {i+1}: [{point[0]:.1f}, {point[1]:.1f}]")
+        

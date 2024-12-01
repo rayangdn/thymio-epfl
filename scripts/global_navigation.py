@@ -14,6 +14,8 @@ SECURITY_MARGIN = 60 #mm
 class GlobalNav:
     
     def __init__(self):
+        
+        
         print("GlobalNav initialized correctly.")
 
     #----------------------------------------#
@@ -85,7 +87,7 @@ class GlobalNav:
         
         path_points = [np.array([point.x,point.y]) for point in shortest_path]
         
-        return path_points # Skip the first point (Thymio position)
+        return path_points
     
     #----------------------------------------#
     
@@ -156,4 +158,4 @@ class GlobalNav:
                     (path_points_int[-1][0] + 10, path_points_int[-1][1] + 10), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
  
-        return trajectory_img, path_points[1:], found_trajectory
+        return trajectory_img, path_points[1:], found_trajectory # Skip the first point (Thymio position)

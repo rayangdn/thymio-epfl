@@ -18,7 +18,7 @@ MIN_TRANSLATION_SPEED = 100
 MAX_TRANSLATION_SPEED = 200
 
 # Obstacle avoidance parameters
-OBSTACLES_MAX_ITER = 7
+OBSTACLES_MAX_ITER = 1
 OBSTACLES_SPEED = 100
 SCALE_SENSOR = 200
 WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]
@@ -31,6 +31,7 @@ class LocalNav():
         self.thymio_pos = None
         self.thymio_orientation = 0
         self.obstacles_iter = 0
+        self.needs_recompute = False
         
         print("LocalNav initialized correctly.")
         
@@ -68,7 +69,7 @@ class LocalNav():
         right_speed = 0
 
         # Updates speed based on sensor data and their corresponding weights
-        for i in range(len(sensor_data) - 2):
+        for i in range(len(sensor_data)):
             left_speed = left_speed + sensor_data[i] * WEIGHT_LEFT[i] / SCALE_SENSOR
             right_speed = right_speed + sensor_data[i] * WEIGHT_RIGHT[i] / SCALE_SENSOR
 
@@ -127,7 +128,6 @@ class LocalNav():
     #----------------------------------------#
         
     def get_command(self, trajectory_points, thymio_pos, sensor_data):
-        
         # Update position and orientation
         self.thymio_pos = np.array(thymio_pos[:2])
         self.thymio_orientation = thymio_pos[2]
@@ -136,15 +136,28 @@ class LocalNav():
         sensor_data = sensor_data[:5]
         
         if self._detect_obstacles(sensor_data):
-            # If obstacles are detected, start avoiding them
             self.obstacles_iter = OBSTACLES_MAX_ITER
-            command, goal_reached =self._avoid_obstacles(sensor_data) 
+            self.needs_recompute = True  # Set flag when obstacles are detected
+            
+            # If obstacles are detected, start avoiding them
+            command, goal_reached = self._avoid_obstacles(sensor_data) 
         else:
-            # If no obstacles are detected, follow the trajectory
+            # If no obstacles are detected, check if we need to recompute
             self.obstacles_iter = max(self.obstacles_iter - 1, 0)
-            command, goal_reached = (
-                self._trajectory_following(trajectory_points) if self.obstacles_iter == 0
-                else self._avoid_obstacles(sensor_data)
-            )
+            
+            if self.obstacles_iter == 0:
+                if self.needs_recompute:
+                    command = {
+                        'action': 'recompute_trajectory',
+                        'current_pos': self.thymio_pos.tolist(),
+                        'current_orientation': self.thymio_orientation
+                    }
+                    self.needs_recompute = False  # Reset flag after requesting recomputation
+                    return command, False
+                else:
+                    command, goal_reached = self._trajectory_following(trajectory_points)
+            else:
+                command, goal_reached = self._avoid_obstacles(sensor_data)
+                
         return command, goal_reached
     

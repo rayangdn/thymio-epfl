@@ -344,7 +344,7 @@ class Vision():
     def flush(self):
         if self.cap is not None:
             # Flush the buffer by reading multiple frames
-            for _ in range(5):  # Read 5 frames to clear buffer
+            for _ in range(10):  # Read 5 frames to clear buffer
                 self.cap.grab()
                 
     def connect_webcam(self):
