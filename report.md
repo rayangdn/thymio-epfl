@@ -22,6 +22,10 @@
     - [Corner Filtering](#corner-filtering)
 - [Global Navigation](#global-navigation)
 - [Local Navigation](#local-navigation)
+  - [Local Navigation Introduction](#local-navigation-intro)
+  - [Control Loop](#control-loop)
+  - [Path Following Loop](#path-following-loop)
+  - [Obstacle Avoidance Loop](#obstacle-avoidance-loop)
 - [Filtering](#filtering)
 - [Motion Control](#motion-control)
 - [Conclusion](#conclusion)
@@ -52,7 +56,7 @@ Our team consists of four first-year Master's students in Robotics at EPFL:
 |---------------- |---------|
 | David XXX       | XXXX    |
 | Ines XXX        | XXXX    |
-| Michel XXX      | XXXX    |
+| Michel Abela    | 339421  |
 | Rayan Gauderon  | 347428  |
 
 ### Role Distribution
@@ -316,6 +320,29 @@ Here's the list with checkmarks in markdown format:
 ## Global navigation
 
 ## Local Navigation
+
+### Local Navigation Introduction
+
+Let’s talk about the Local Navigation module. It helps the Thymio follow the path computed by the Global Navigation module, and at the same time dynamically avoid 3D obstacles that get in its way… The code for this section can be found in the local_navigation.py file.
+The path is given to the Thymio as a list of tuples (px, py) representing the waypoints to follow in order.
+
+### Control Loop
+
+The “get_command” function inside the LocalNav() class runs in a loop, and decide wether the Thymio should be in a path following mode or in obstacle avoidance. The loop starts by checking if an obstacle is in front of the robot using the proximity sensors: if its the case, the robot goes into the obstacle avoidance routine, and if not, the robot can start following the path.
+In case the Thymio previously detected and avoided an obstacle, the avoidance routine will be run for the following 7 loop cycles (tunable by modifying “OBSTACLES_MAX_ITER” constant) before going back to the path following mode, to ensure the obstacle is no longer in its way.
+
+### Path Following Loop
+
+The “_trajectory_following” function in the LocalNav() class makes sure the robot stays on the desired path by constantly checking the distance and angle differences between the actual pose of the robot and the next waypoint to be reached. In order to do so, it uses the “_calculate_motion_commands” function that implements a proportional controller on both translation and rotation dynamics, which computes the “forward_speed” (which is the base speed of left/right motors) and the “rotation_speed” (which is the speed increment of each of the left/right motors).
+The two proportional controller have been tuned empirically by trial and error to obtain the best performance possible of the system as a whole.
+
+### Obstacle Avoidance Loop
+
+The obstacle avoidance routine (“_avoid_obstacles” function in the LocalNav() class) is a simple implementation of the Artificial Neural Network we saw during one of the practical sessions of the course.
+The input of the neural network are the readings of the proximity sensors, which are then multiplied by the weights and summed together to get the speed assigned to each of the motors. We do not consider the readings of the proximity sensors on the back of the robot since it will always move forward so it shouldn’t detect any obstacle from the rear. 
+Once the Thymio avoided an obstacle, to make sure it is completely gone, the robot checks a few times the sensors before going back to the path_following mode.
+
+METTRE PHOTO ANN DU TP ICI
 
 ## Filtering
 
