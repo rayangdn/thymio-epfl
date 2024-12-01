@@ -306,10 +306,12 @@ This filtering process:
 Finally, the detected obstacle corners are converted from pixel coordinates to millimeters using our perspective transform scale factor. This conversion is crucial for the navigation system as it needs real-world measurements to plan paths and avoid obstacles effectively.
 
 The combination of these processing steps creates a robust obstacle detection system that:
-- Works reliably under varying lighting conditions
-- Handles obstacles of different shapes and sizes
-- Provides accurate position information in real-world coordinates
-- Minimizes false detections through filtering
+Here's the list with checkmarks in markdown format:
+
+✓ Works reliably under varying lighting conditions \
+✓ Handles obstacles of different shapes and sizes \
+✓ Provides accurate position information in real-world coordinates \
+✓ Minimizes false detections through filtering
 
 ## Global navigation
 
