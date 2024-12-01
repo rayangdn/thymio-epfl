@@ -12,6 +12,14 @@
   - [Calibration](#calibration)
     - [Process](#process)
     - [Calibration Parameters](#calibration-parameters)
+  - [ArUco Marker Detection](#aruco-marker-detection)
+    - [Marker Configuration](#marker-configuration)
+  - [Perspective Transform](#perspective-transform)
+    - [Computing the Transform Matrix](#computing-the-transform-matrix)
+    - [Applying the Transform](#applying-the-transform)
+  - [Obstacle Detection](#obstacle-detection)
+    - [Processing Pipeline](#processing-pipeline)
+    - [Corner Filtering](#corner-filtering)
 - [Global Navigation](#global-navigation)
 - [Local Navigation](#local-navigation)
 - [Filtering](#filtering)
@@ -22,7 +30,7 @@
 This project was developed as part of the **Basics of Mobile Robotics (MICRO-452)** course at EPFL, under the supervision of Professor Francesco Mondada from the [MOBOTS Laboratory](https://www.epfl.ch/labs/mobots/).
 
 ### Objectives
-Our team aims to develop an autonomous navigation system for the Thymio robot that can:
+We aims to develop an autonomous navigation system for the Thymio robot that can:
 1. Navigate through a predefined environment with static obstacles using global navigation
 2. Dynamically avoid unexpected obstacles using local navigation
 3. Maintain accurate position estimation through filtering
@@ -157,7 +165,7 @@ The detection process uses OpenCV's `detectMarkers()` function, which returns th
 
 ### Perspective Transform
 
-Our vision system implements a perspective transform to convert the camera's angled view into a top-down perspective, which is essential for accurate navigation and obstacle detection. We based our implementation on [OpenCV's geometric transformations](https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html).
+A perspective transform is implemented  to convert the camera's angled view into a top-down perspective, which is essential for accurate navigation and obstacle detection. We based our implementation on [OpenCV's geometric transformations](https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html). The map used can be find below:
 
 <p align="center">
 <img src="img/vision/aruco_markers/map.png" width="500" alt="map environment">
@@ -209,7 +217,7 @@ This transformation allows us to:
 
 ### Obstacle Detection
 
-Our obstacle detection system combines Canny edge detection and contour finding from OpenCV to identify obstacles in the environment. The implementation is based on [OpenCV's Canny Edge Detection](https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html) and [Contour Detection](https://docs.opencv.org/3.4/d4/d73/tutorial_py_contours_begin.html) tutorials.
+Our obstacle detection system combines Canny edge detection and contour finding from OpenCV to identify obstacles in the environment. The implementation is based on [OpenCV's Canny Edge Detection](https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html) and [Contour Detection](https://docs.opencv.org/3.4/d4/d73/tutorial_py_contours_begin.html) tutorials. A typical environment with different shape obstacles can be seen below:
 
 <p align="center">
 <img src="img/vision/obstacles/obstacles.jpg" width="500" alt="obstacles">
