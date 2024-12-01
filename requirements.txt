@@ -1,14 +1,7 @@
 numpy>=1.24.0
 opencv-python>=4.8.0
-opencv-contrib-python>=4.8.0
-PyYAML>=6.0.1
 matplotlib>=3.4.3
 pyvisgraph>=0.2.1
 tqdm>=4.65.0
 docutils>=0.20.1
-ipywidgets>=8.0.0
-tqdm>=4.65.0
 tdmclient>=0.1.21
-tk-tools>=0.16.0
-scipy>=1.7.0
-tqdm>=4.65.0
