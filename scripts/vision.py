@@ -112,8 +112,8 @@ class Vision():
                 c = corners[i][0]
                 
                 # Calculate Thymio position from marker ID 4
-                center = np.mean(c, axis=0).astype(int)
                 if marker_id == 4:
+                    center = np.mean(c, axis=0).astype(int)
                     found_thymio = True
                     thymio_pos[:2] = center
                     
@@ -155,8 +155,8 @@ class Vision():
                 c = corners[i][0]
                 
                 # Calculate goal position from marker ID 5
-                center = np.mean(c, axis=0).astype(int)
                 if marker_id == 5:
+                    center = np.mean(c, axis=0).astype(int)
                     found_goal = True
                     goal_pos = center
                     

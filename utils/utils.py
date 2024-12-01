@@ -76,7 +76,9 @@ def display_processing_steps(steps):
         plt.axis('off')
     
     plt.tight_layout()
+    #plt.savefig('./img/vision//obstacles/obstacles_detection.png', dpi=300, bbox_inches='tight')
     plt.show()
+    
     clear_output(wait=True)
 
 # Draw robot as rectangle

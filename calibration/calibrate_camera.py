@@ -155,7 +155,7 @@ def load_calibration(filename="camera_calibration.npz"):
     return data['camera_matrix'], data['dist_coeffs']
 
 if __name__ == "__main__":
-    # Run calibration with your specific checkerboard parameters
+    # Run calibration with the checkerboard parameters
     camera_matrix, dist_coeffs = calibrate_camera(
         checkerboard_size=(7,10),  # 7x10 inner corners for 8x11 squares
         square_size=0.015          # 15mm = 0.015 meters
