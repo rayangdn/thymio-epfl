@@ -342,7 +342,9 @@ The obstacle avoidance routine (“_avoid_obstacles” function in the LocalNav(
 The input of the neural network are the readings of the proximity sensors, which are then multiplied by the weights and summed together to get the speed assigned to each of the motors. We do not consider the readings of the proximity sensors on the back of the robot since it will always move forward so it shouldn’t detect any obstacle from the rear. 
 Once the Thymio avoided an obstacle, to make sure it is completely gone, the robot checks a few times the sensors before going back to the path_following mode.
 
-METTRE PHOTO ANN DU TP ICI
+<p align="center">
+<img src="img/local_nav/figure_ANN_TP.png" width="500" alt="local_nav_ann">
+</p>
 
 ## Filtering
 
