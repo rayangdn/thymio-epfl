@@ -410,16 +410,162 @@ The filtering module's core purpose is robust state estimation for robot localiz
 
 It performs the state estimation of the differential-drive robot, tracking robot pose (x, y, θ) and linear and angular velocity (v, w) using a nonlinear motion model. We employ a simplified discrete time state space model, assuming a sufficiently small timestep:
 
-$$ \begin{align*} x_{i+1} &= x_i + \bar{v}i \cdot \Delta t \cdot \cos(\theta_i)\ y{i+1} &= y_i + \bar{v}i \cdot \Delta t \cdot \cos(\theta_i)\ \theta{i+1} &= \theta_i + \omega_i \cdot \Delta t \end{align*} $$
+$$ \begin{align*} 
+x_{i+1} &= x_i + v_i \cdot \Delta t \cdot \cos(\theta_i) \\ 
+y{i+1} &= y_i + v_i \cdot \Delta t \cdot \cos(\theta_i)\\ 
+\theta{i+1} &= \theta_i + \omega_i \cdot \Delta t 
+\v{i+1} &= v_i \\
+\omega_{i+1} &= \omega_i 
+\end{align*} $$
 
+EXPLAIN WE DON'T VARY (FIXED) V AND W between two segments, two control inputs.
 Since the model that we have chosen is nonlinear with respect to the orientation of the robot, standard Kalman filter formulation İs not sufficient. For this reason, we used the Extended Kalman Filter model.
 
 The Extended Kalman Filter implementation handles this by processing measurements from both sensors, weighting data based on sensor uncertainty, linearizing the nonlinear motion model around current state estimates, and providing filtered state estimates robust to sensor failures.
 
-
 ### Extended Kalman Filter Model
-#### State Transition Model
-$$ \hat{x}_k^- = f(\hat{x}_{k-1}, u_k) $$
+We assume a system described by the following nonlinear models: 
+$$ \begin{align*}
+\hat{x}_k = f(\hat{x}_{k-1}, u_{k-1}) - w_{k-1}
+\end{align*}$$
+where $$\hat{x}_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
+
+$$ \begin{align*}
+x =
+\begin{bmatrix}
+x \\
+y \\
+\theta \\
+v \\
+\omega
+\end{bmatrix}
+\end{align*}$$
+
+
+This nonlinear state transition function $$f$$ is: 
+##### State Transition Model
+$$
+\begin{align*}
+x_{\text{next}} &= x + v \cdot \cos(\theta) \cdot \Delta t \\
+y_{\text{next}} &= y + v \cdot \sin(\theta) \cdot \Delta t \\
+\theta_{\text{next}} &= \theta + \omega \cdot \Delta t \\
+v_{\text{next}} &= v \\
+\omega_{\text{next}} &= \omega
+\end{align*}
+$$
+
+Furthermore, the state transition matrix $$F$$ can be found by calculating the Jacobian of the nonlinear state transition model $$f$$ with respect to the state $$x$$. 
+$$\begin{align*}
+F = 
+\begin{bmatrix}
+1 & 0 & - v \cdot \sin(\theta_i) \cdot \Delta t &  \cos(\theta) \cdot \Delta t & 0\\
+0 & 1 & v \cdot \cos(\theta) \cdot \Delta t &  \sin(\theta) \cdot \Delta t & 0 \\
+0 & 0 & 1 & 0 & \Delta t \\
+0 & 0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 0 & 1 \\
+\end{bmatrix}
+\end{align*}
+$$
+
+The state transition is implemented in the predict(self, u) function, which will be explicited in the Prediction Step part.
+        
+##### Observation Model
+$$ \begin{align*}
+z_k = h(\hat{x}_k) + v_k
+\end{align*}$$
+where $$z_k$$ is the observation vector, $$h$$ is the observation function and $$v_k$$ is the measurement noise, assumed Gaussian with zero mean and covariance matrix $$R_k$$.
+
+Our measurement function $$h$$ is: 
+$$\begin{align*}
+h(x_i) = \begin{bmatrix} x_{\textrm{camera}}\ y_{\textrm{camera}}\ \theta_{\textrm{camera}}\ v{\textrm{sensor}}\ \omega{\textrm{sensor}} 
+\end{bmatrix} 
+\end{align*} $$
+and the measurement Jacobian $$H$$ is simply the 5x5 identity matrix.
+
+#### Prediction Step
+We predict the state at time $$k$$:
+$$ \begin{align*}
+\hat{x}_k^- = f(\hat{x}_{k-1}, u_k)
+\end{align*}$$
+
+$$ \begin{align*}
+P_k = F_k P_{k-1} F_k^T + Q_k
+\end{align*}$$
+and compute the predicted covariance $$P_k$$ of the state estimate. 
+
+This Prediction step is done in the predict(self, u) function. 
+        if len(u) != self.m:
+            raise ValueError(f"Control input must have length {self.m}")
+        
+        # Extract states
+        x, y, theta, _, _ = self.state
+        v_l, v_r = u
+        
+        v, omega = self._compute_velocity(v_l, v_r)
+        
+        # Predict next state using motion model
+        x_next = x + v * np.cos(theta) * self.dt
+        y_next = y + v * np.sin(theta) * self.dt
+        theta_next = theta + omega * self.dt
+        v_next = v
+        omega_next = omega
+        
+        self.state = np.array([x_next, y_next, theta_next, v_next, omega_next])
+        
+        # Compute Jacobian of state transition
+        F = np.eye(self.n)
+        F[0, 2] = -v * np.sin(theta) * self.dt
+        F[0, 3] = np.cos(theta) * self.dt
+        F[1, 2] = v * np.cos(theta) * self.dt
+        F[1, 3] = np.sin(theta) * self.dt
+        F[2, 4] = self.dt
+        
+        # Update covariance
+        self.P = F @ self.P @ F.T + self.Q
+
+#### Update Step
+% Kalman Gain Calculation
+$$ \begin{align*}
+K_k = P_k H_k^T(H_k P_k H_k^T + R_k)^{-1}
+\end{align*}$$
+
+% State Update
+$$ \begin{align*}
+\hat{x}_k = \hat{x}_k + K_k(z_k - h(\hat{x}_k))
+\end{align*}$$
+
+% Covariance Update
+$$ \begin{align*}
+P_k = (I - K_k H_k)P_k
+\end{align*}$$
+
+% Jacobian Matrices
+$$ \begin{align*}
+F_k = \left.\frac{\partial f}{\partial x}\right|_{\hat{x}_{k-1}, u_k}
+
+H_k = \left.\frac{\partial h}{\partial x}\right|_{\hat{x}_k}
+\end{align*}$$
+
+We implement this in the following function update(self, measurement):
+        
+        measurement[3], measurement[4] = self._compute_velocity(measurement[3], measurement[4])
+        
+        # Measurement matrix 
+        H = np.eye(self.n)
+        
+        # Compute Kalman gain
+        S = H @ self.P @ H.T + self.R
+        K = self.P @ H.T @ np.linalg.inv(S)
+        
+        # Update state and covariance
+        y = measurement - self.state
+        
+        # Normalize angle difference [-pi, pi]
+        y[2] = np.arctan2(np.sin(y[2]), np.cos(y[2]))
+        
+        self.state = self.state + K @ y
+        self.P = (np.eye(self.n) - K @ H) @ self.P
+
 
 
 ## Motion Control
