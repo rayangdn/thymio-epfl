@@ -21,7 +21,7 @@
     - [Processing Pipeline](#processing-pipeline)
     - [Corner Filtering](#corner-filtering)
 - [Global Navigation](#global-navigation)
-   -[Path Finding](#path-finding)
+  - [Path Finding](#path-finding)
 - [Local Navigation](#local-navigation)
   - [Local Navigation Introduction](#local-navigation-intro)
   - [Control Loop](#control-loop)
@@ -410,7 +410,7 @@ The filtering module's core purpose is robust state estimation for robot localiz
 
 It performs the state estimation of the differential-drive robot, tracking robot pose (x, y, θ) and linear and angular velocity (v, w) using a nonlinear motion model. We employ a simplified discrete time state space model, assuming a sufficiently small timestep:
 
-{tex ' \begin{align*} x_{i+1} &= x_i + \bar{v}i \cdot \Delta t \cdot \cos(\theta_i)\ y{i+1} &= y_i + \bar{v}i \cdot \Delta t \cdot \cos(\theta_i)\ \theta{i+1} &= \theta_i + \omega_i \cdot \Delta t \end{align*} '}
+$$ \begin{align*} x_{i+1} &= x_i + \bar{v}i \cdot \Delta t \cdot \cos(\theta_i)\ y{i+1} &= y_i + \bar{v}i \cdot \Delta t \cdot \cos(\theta_i)\ \theta{i+1} &= \theta_i + \omega_i \cdot \Delta t \end{align*} $$
 
 Since the model that we have chosen is nonlinear with respect to the orientation of the robot, standard Kalman filter formulation İs not sufficient. For this reason, we used the Extended Kalman Filter model.
 
@@ -419,7 +419,7 @@ The Extended Kalman Filter implementation handles this by processing measurement
 
 ### Extended Kalman Filter Model
 #### State Transition Model
-{tex '\hat{x}_k^- = f(\hat{x}_{k-1}, u_k)'}
+$$ \hat{x}_k^- = f(\hat{x}_{k-1}, u_k) $$
 
 
 ## Motion Control
