@@ -429,6 +429,8 @@ Since the model that we have chosen is nonlinear with respect to the orientation
 
 The Extended Kalman Filter implementation handles this by processing measurements from both sensors, weighting data based on sensor uncertainty, linearizing the nonlinear motion model around current state estimates, and providing filtered state estimates robust to sensor failures.
 
+EXPAND ON LIMITATIONS & ASSUMPTIONS
+
 ### Extended Kalman Filter Model
 We assume a system described by the following nonlinear models:
 
@@ -604,47 +606,47 @@ In this notebook, we first perform a speed conversion test, which allows us to d
 Afterward, we perform a camera covariance test, representing the measurement error on x, y and theta. For this task, we collect a sample of 500 camera photographs of the a given map configuration, obstacle selection and robot position. Using our Vision module to obtain the Thymio position and orientation from such a frame, we then compute the Covariance on x, y and theta. 
 ##### Camera Noise Covariance Test 
 
-n_samples = 500
-positions = np.zeros((n_samples, 2))  # For x,y positions
-orientations = np.zeros(n_samples)    # For orientation values
-
-try:
-    vision.connect_webcam()
-   # Collect data
-    print("Collecting camera data...")
-    vision.get_perspective_parameters(WORLD_WIDTH, WORLD_HEIGHT)
-    found_thymio = False
-    for i in tqdm(range(n_samples)):
-        _, process_frame = vision.get_frame()
-        frame, thymio_pos, found_thymio = vision.get_thymio_position(process_frame)
-        if found_thymio:
-            positions[i] = thymio_pos[:2] # Store x,y positions
-            orientations[i] = thymio_pos[2] # Store orientation values
-        else:
-           # We want 500 samples, so if we don't find the Thymio, we need to go back one step
-            i -= 1
-        time.sleep(DT)
+    n_samples = 500
+    positions = np.zeros((n_samples, 2))  # For x,y positions
+    orientations = np.zeros(n_samples)    # For orientation values
+    
+    try:
+        vision.connect_webcam()
+       
+        print("Collecting camera data...")
+        vision.get_perspective_parameters(WORLD_WIDTH, WORLD_HEIGHT)
+        found_thymio = False
+        for i in tqdm(range(n_samples)):
+            _, process_frame = vision.get_frame()
+            frame, thymio_pos, found_thymio = vision.get_thymio_position(process_frame)
+            if found_thymio:
+                positions[i] = thymio_pos[:2] # Store x,y positions
+                orientations[i] = thymio_pos[2] # Store orientation values
+            else:
+               # We want 500 samples, so if we don't find the Thymio, we need to go back one step
+                i -= 1
+            time.sleep(DT)
 
 The odometry measurement noise on the linear velocity $$v$$  is established by performing 5 trials at 6 selected target values of the speed. The targed_speeds are communicated to the Thymio as a control input set_motor_speed(target_v, target_v), having the left and right velocity equal to the target velocity. Finally, we collect the Thymio's odometry values with: left, right = get_motor_speed(). We therefore obtain the error distribution at different target speeds. 
 ##### Odometry Noise Covariance Test
-all_samples = []
-target_speeds = [100, 120, 140, 160, 180, 200]
-
-for target_v in target_speeds:
-    input(f"Press enter for speed {target_v}...")
-    for i in range(5):
-        input("Press enter for next trial...")
-        print(f"Testing speed: {target_v}, trial {i + 1}")
-        clear_output(wait=True)
-        set_motor_speed(target_v, target_v)
-        time.sleep(1)  # Stabilize
-        
-        samples = []
-        for _ in range(50):
-            left, right = get_motor_speed()
-            v = (left + right) / 2
-            samples.append(v)
-            time.sleep(DT)
+    all_samples = []
+    target_speeds = [100, 120, 140, 160, 180, 200]
+    
+    for target_v in target_speeds:
+        input(f"Press enter for speed {target_v}...")
+        for i in range(5):
+            input("Press enter for next trial...")
+            print(f"Testing speed: {target_v}, trial {i + 1}")
+            clear_output(wait=True)
+            set_motor_speed(target_v, target_v)
+            time.sleep(1)  # Stabilize
+            
+            samples = []
+            for _ in range(50):
+                left, right = get_motor_speed()
+                v = (left + right) / 2
+                samples.append(v)
+                time.sleep(DT)
 
 A similar approach is followed to compute the measurement noise on the angular velocity $$\omega$$. This also forms part of the odometry measurement error. 
 
@@ -667,69 +669,69 @@ For the Process noise covariance matrix $$Q$$, we perform two tests: for the pro
 
 The x,y and v process noise covariance test is done in the following manner. We have a selection of target speeds, and for each value we do 5 trials. At each target speed, we set the motor speed to that target, let the robot move during a certain timespan, collect the actual_position of the robot at different timestamps through the camera vision, and analytically compute the expected_position of the robot at each timestamps using the state transition model detailed previously. With these two values, we can compute the process variance on x, y and v. 
 
-    target_speeds = [100, 120, 140, 160, 180, 200]
-    #all_variances = {speed: [] for speed in target_speeds}
-    # MODIFICATION
-    all_variances = {speed: {'pos': [], 'vel': []} for speed in target_speeds}
-    
-    for speed in target_speeds:
-        input(f"Testing speed {speed}...")
-        for trial in range(5):
-            motor_stop()
-            clear_output(wait=True)
-            input(f"Trial {trial + 1}: Place robot at start, press enter...")
-            print(f"Testing speed: {speed}, trial {trial + 1}")
-            found_thymio = False
-            vision.flush()
-            while not found_thymio:
-                _, process_frame = vision.get_frame()
-                _, initial_pos, found_thymio = vision.get_thymio_position(process_frame)
-            set_motor_speed(speed, speed)
-            time.sleep(1)
-            
-            expected_positions = []
-            actual_positions = []
-            # MODIFICATION
-            actual_velocities = []
-            t = 0
-            last_pos = initial_pos[:2]
-            last_time = time.time()
-            
-            for _ in range(30):
-                current_time = time.time()
-                _, frame = vision.get_frame()
-                _, pos, found = vision.get_thymio_position(frame)
-                if found:
-                    expected_x = initial_pos[0] + speed / SPEED_TO_MM_S * np.cos(pos[2]) * t
-                    expected_y = initial_pos[1] + speed / SPEED_TO_MM_S * np.sin(pos[2]) * t
-                    expected_positions.append([expected_x, expected_y])
-                    actual_positions.append(pos[:2])
-
-                    # Calculate actual velocity
-                    dt = current_time - last_time
-                    if dt > 0:
-                        dx = pos[0] - last_pos[0]
-                        dy = pos[1] - last_pos[1]
-                        actual_v = np.sqrt(dx**2 + dy**2) / dt
-                        actual_velocities.append(actual_v)
-                    
-                    last_pos = pos[:2]
-                    last_time = current_time
-
-                t += DT
-                time.sleep(DT)
-            
-            motor_stop()
-            diffs = np.array(actual_positions) - np.array(expected_positions)
-            print(f"Differences - X: {np.mean(diffs[:, 0]):.4f}, Y: {np.mean(diffs[:, 1]):.4f}")
-            
-            position_var = np.var(diffs, axis=0)
-            all_variances[speed].append(position_var)
-
-            # Velocity variance calculation
-            target_v = speed / SPEED_TO_MM_S  # Convert to mm/s
-            velocity_diffs = np.array(actual_velocities) - target_v
-            velocity_var = np.var(velocity_diffs)
+      target_speeds = [100, 120, 140, 160, 180, 200]
+      #all_variances = {speed: [] for speed in target_speeds}
+      # MODIFICATION
+      all_variances = {speed: {'pos': [], 'vel': []} for speed in target_speeds}
+      
+      for speed in target_speeds:
+          input(f"Testing speed {speed}...")
+          for trial in range(5):
+              motor_stop()
+              clear_output(wait=True)
+              input(f"Trial {trial + 1}: Place robot at start, press enter...")
+              print(f"Testing speed: {speed}, trial {trial + 1}")
+              found_thymio = False
+              vision.flush()
+              while not found_thymio:
+                  _, process_frame = vision.get_frame()
+                  _, initial_pos, found_thymio = vision.get_thymio_position(process_frame)
+              set_motor_speed(speed, speed)
+              time.sleep(1)
+              
+              expected_positions = []
+              actual_positions = []
+              # MODIFICATION
+              actual_velocities = []
+              t = 0
+              last_pos = initial_pos[:2]
+              last_time = time.time()
+              
+              for _ in range(30):
+                  current_time = time.time()
+                  _, frame = vision.get_frame()
+                  _, pos, found = vision.get_thymio_position(frame)
+                  if found:
+                      expected_x = initial_pos[0] + speed / SPEED_TO_MM_S * np.cos(pos[2]) * t
+                      expected_y = initial_pos[1] + speed / SPEED_TO_MM_S * np.sin(pos[2]) * t
+                      expected_positions.append([expected_x, expected_y])
+                      actual_positions.append(pos[:2])
+  
+                      # Calculate actual velocity
+                      dt = current_time - last_time
+                      if dt > 0:
+                          dx = pos[0] - last_pos[0]
+                          dy = pos[1] - last_pos[1]
+                          actual_v = np.sqrt(dx**2 + dy**2) / dt
+                          actual_velocities.append(actual_v)
+                      
+                      last_pos = pos[:2]
+                      last_time = current_time
+  
+                  t += DT
+                  time.sleep(DT)
+              
+              motor_stop()
+              diffs = np.array(actual_positions) - np.array(expected_positions)
+              print(f"Differences - X: {np.mean(diffs[:, 0]):.4f}, Y: {np.mean(diffs[:, 1]):.4f}")
+              
+              position_var = np.var(diffs, axis=0)
+              all_variances[speed].append(position_var)
+  
+              # Velocity variance calculation
+              target_v = speed / SPEED_TO_MM_S  # Convert to mm/s
+              velocity_diffs = np.array(actual_velocities) - target_v
+              velocity_var = np.var(velocity_diffs)
 
 Finally, for the orientation theta and angular velocity w process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
             
