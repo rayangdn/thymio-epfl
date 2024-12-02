@@ -28,11 +28,10 @@
   - [Path Following Loop](#path-following-loop)
   - [Obstacle Avoidance Loop](#obstacle-avoidance-loop)
 - [Filtering](#filtering)
-    -[Extended Kalman Filter Model](#extended-kalman-filter)
-        -[Kinematic Model](#kinematic-model)
-        -[Noise Covariance Matrices](#noise-covariance-matrices)
-          -[Process Noise](#process-noise)
-          -[Measurement Noise](#measurement-noise)
+  - [Extended Kalman Filter Model](#extended-kalman-filter)
+    - [Prediction Step](#prediction-step)
+    - [Update Step](#update-step)
+    - [Noise Covariance Matrices](#noise-covariance-matrices)
 - [Motion Control](#motion-control)
 - [Conclusion](#conclusion)
 
@@ -61,7 +60,7 @@ Our team consists of four first-year Master's students in Robotics at EPFL:
 | Name            | SCIPER  |
 |---------------- |---------|
 | David XXX       | XXXX    |
-| Ines Altemir Mariñas  | 344399    |
+| Ines Altemir Mariñas  | 344399 |
 | Michel Abela    | 339421  |
 | Rayan Gauderon  | 347428  |
 
@@ -69,7 +68,7 @@ Our team consists of four first-year Master's students in Robotics at EPFL:
 The project responsibilities are distributed to maximize efficiency while ensuring each team member contributes to multiple aspects of the system:
 
 - **Vision and Environment Processing**: Rayan and Michel
-- **Path Planning and Navigation**: Ines and David
+- **Path Planning and Navigation**: Inés and David
 - **Robot Control and Localization**: All team members
 - **System Integration and Testing**: All team members
 
@@ -364,9 +363,9 @@ Finally, the get_trajectory(self, img, thymio_pos, goal_pos, obstacles_pos, thym
   
 - Regarding the uncertainty on the position of the robot and the detection of the obstacles, we have chosen the value of SECURITY_MARGIN large enough to englobe the uncertainty covariance (camera measurement??).
   
--Furthermore, the potential issues arising from treating the robot as a point, in terms of robot kinematics and dynamics, are taken care of in the Local Navigation module, where we establish a MAX_ROTATION_SPEED, a MIN_TRANSLATION_SPEED, a MAX_TRANSLATION_SPEED and much more. 
+- Furthermore, the potential issues arising from treating the robot as a point, in terms of robot kinematics and dynamics, are taken care of in the Local Navigation module, where we establish a MAX_ROTATION_SPEED, a MIN_TRANSLATION_SPEED, a MAX_TRANSLATION_SPEED and much more. 
 
--Additionally, one may observe that the global paths outputted by the visibility graph algorithm are angular (visibility graphs naturally produce straight-line segments), not possessing any smoothness at all. This is done intentionally, in order to simplify the robot dynamics to the maximum extent possible, as implementing a gradually increasing angular velocity, or multiple reorientations, may exacerbate error, rather than doing a punctual re-orientation. (WE ONLY DO STRAIGHT LINES?? should always have w = 0, except at waypoints, Robot orientation at waypoints). Indeed, we are prioritizing geometric optimality over smooth paths. COMPARISON TO GRID-BASED MAPS??. This graph + algorithm allows us to construct a path that seeks to minimise the complexity of motion control, in a bid to minimise the magnification of motion control error. 
+- Additionally, one may observe that the global paths outputted by the visibility graph algorithm are angular (visibility graphs naturally produce straight-line segments), not possessing any smoothness at all. This is done intentionally, in order to simplify the robot dynamics to the maximum extent possible, as implementing a gradually increasing angular velocity, or multiple reorientations, may exacerbate error, rather than doing a punctual re-orientation. (WE ONLY DO STRAIGHT LINES?? should always have w = 0, except at waypoints, Robot orientation at waypoints). Indeed, we are prioritizing geometric optimality over smooth paths. COMPARISON TO GRID-BASED MAPS??. This graph + algorithm allows us to construct a path that seeks to minimise the complexity of motion control, in a bid to minimise the magnification of motion control error. 
 
 ((Navigation algorithm properties:
 • Optimality: does the planner find trajectories that are optimal in some sense (length,
@@ -403,15 +402,24 @@ Once the Thymio avoided an obstacle, to make sure it is completely gone, the rob
 </p>
 
 ## Filtering
-The motivation behind filtering is the fact that we seek to represent a world which is perceived with errors, on which we do actions taht do not correspond exactly to our oders, and with maps that are uncertain. To this end, we im to improve the estimation of our state X, after having incorporated sensor data. 
+- The motivation behind filtering is the fact that we seek to represent a world which is perceived with errors, on which we do actions that do not correspond exactly to our oders, and with maps that are uncertain. To this end, we im to improve the estimation of our state X, after having incorporated sensor data. 
+- We assume a static world and focus on estimating only the pose of a kinematic mobile robot
+- The widely used approximations are: Linearization and parametrization for Gaussian filters. The EKF, when performing localization, has the motion and measurement models linearized (using the Jacobian matric)
 
-We assume a static world and focus on estimating only the pose of a kinematic mobile robot
-The widely used approximations are: Linearization and parametrization for Gaussian filters. The EKF, when performing localization, has the motion and measurement models linearized (using the Jacobian matric)
+The filtering module's core purpose is robust state estimation for robot localization by fusing multiple data sources, both the computer vision positioning data and the wheel odometry obtained from the Thymio. Furthermore, it possesses a fallback capability, as it maintains position tracking using odometry when vision data is unavailable/unreliable, be it because the camera is covered or because the computer vision submodule is malfunctioning. 
+
+It performs the state estimation of the differential-drive robot, tracking robot pose (x, y, θ) and linear and angular velocity (v, w) using a nonlinear motion model. We employ a simplified discrete time state space model, assuming a sufficiently small timestep:
+
+{tex ' \begin{align*} x_{i+1} &= x_i + \bar{v}i \cdot \Delta t \cdot \cos(\theta_i)\ y{i+1} &= y_i + \bar{v}i \cdot \Delta t \cdot \cos(\theta_i)\ \theta{i+1} &= \theta_i + \omega_i \cdot \Delta t \end{align*} '}
+
+Since the model that we have chosen is nonlinear with respect to the orientation of the robot, standard Kalman filter formulation İs not sufficient. For this reason, we used the Extended Kalman Filter model.
+
+The Extended Kalman Filter implementation handles this by processing measurements from both sensors, weighting data based on sensor uncertainty, linearizing the nonlinear motion model around current state estimates, and providing filtered state estimates robust to sensor failures.
+
 
 ### Extended Kalman Filter Model
-The Extended Kalman Filter (EKF) is a nonlinear version of the Kalman Filter, used for systems where the state transition and/or observation models are nonlinear. It linearizes these models about the current state estimate.
 #### State Transition Model
-\hat{x}_k^- = f(\hat{x}_{k-1}, u_k)
+{tex '\hat{x}_k^- = f(\hat{x}_{k-1}, u_k)'}
 
 
 ## Motion Control
