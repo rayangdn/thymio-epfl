@@ -652,8 +652,9 @@ A similar approach is followed to compute the measurement noise on the angular v
 
 Thanks to the experiments done, we can therefore define, at the beginning of the extended_kalman_filter.py file: 
 
-# Values obtain in run_tests.ipynb
+Values obtained in run_tests.ipynb
 R_COVERED = np.diag([9999999, 9999999, 9999999, 35.8960, 154.1675]) # No measurement from camera
+
 R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 35.8960, 154.1675])
 
 Due to the fact that the camera vision can be covered, we define two different measurement noise covariance matrices $$R$$, more precisely $$R_{COVERED}$$ and $$R_{UNCOVERED}$$. When the camera is covered, and therefore camera measurements aren't available, the measurement noise covariances on (x, y , theta) are set to near-infinite values. This effectively tells the Kalman filter to ignore any position/orientation measurements during these periods and rely solely on the motion model prediction and odometry measurements. This is a common technique in Kalman filtering when certain sensors become temporarily unavailable - setting their corresponding measurement uncertainties to very high values effectively disables their influence on the state estimate.
@@ -735,7 +736,7 @@ The x,y and v process noise covariance test is done in the following manner. We 
 
 Finally, for the orientation theta and angular velocity w process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
             
-# Values obtain in run_tests.ipynb
+Values obtained in run_tests.ipynb
 Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
 
 
