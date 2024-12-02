@@ -413,8 +413,8 @@ It performs the state estimation of the differential-drive robot, tracking robot
 $$ \begin{align*} 
 x_{i+1} &= x_i + v_i \cdot \Delta t \cdot \cos(\theta_i) \\ 
 y{i+1} &= y_i + v_i \cdot \Delta t \cdot \cos(\theta_i)\\ 
-\theta{i+1} &= \theta_i + \omega_i \cdot \Delta t 
-\v{i+1} &= v_i \\
+\theta{i+1} &= \theta_i + \omega_i \cdot \Delta t \\
+v{i+1} &= v_i \\
 \omega_{i+1} &= \omega_i 
 \end{align*} $$
 
@@ -424,10 +424,12 @@ Since the model that we have chosen is nonlinear with respect to the orientation
 The Extended Kalman Filter implementation handles this by processing measurements from both sensors, weighting data based on sensor uncertainty, linearizing the nonlinear motion model around current state estimates, and providing filtered state estimates robust to sensor failures.
 
 ### Extended Kalman Filter Model
-We assume a system described by the following nonlinear models: 
+We assume a system described by the following nonlinear models:
+
 $$ \begin{align*}
 \hat{x}_k = f(\hat{x}_{k-1}, u_{k-1}) - w_{k-1}
 \end{align*}$$
+
 where $$\hat{x}_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
 
 $$ \begin{align*}
@@ -444,6 +446,7 @@ v \\
 
 This nonlinear state transition function $$f$$ is: 
 ##### State Transition Model
+
 $$
 \begin{align*}
 x_{\text{next}} &= x + v \cdot \cos(\theta) \cdot \Delta t \\
@@ -455,6 +458,7 @@ v_{\text{next}} &= v \\
 $$
 
 Furthermore, the state transition matrix $$F$$ can be found by calculating the Jacobian of the nonlinear state transition model $$f$$ with respect to the state $$x$$. 
+
 $$\begin{align*}
 F = 
 \begin{bmatrix}
@@ -470,20 +474,25 @@ $$
 The state transition is implemented in the predict(self, u) function, which will be explicited in the Prediction Step part.
         
 ##### Observation Model
+
 $$ \begin{align*}
 z_k = h(\hat{x}_k) + v_k
 \end{align*}$$
+
 where $$z_k$$ is the observation vector, $$h$$ is the observation function and $$v_k$$ is the measurement noise, assumed Gaussian with zero mean and covariance matrix $$R_k$$.
 
-Our measurement function $$h$$ is: 
+Our measurement function $$h$$ is:
+
 $$\begin{align*}
 h(x_i) = \begin{bmatrix} x_{\textrm{camera}}\ y_{\textrm{camera}}\ \theta_{\textrm{camera}}\ v{\textrm{sensor}}\ \omega{\textrm{sensor}} 
 \end{bmatrix} 
 \end{align*} $$
+
 and the measurement Jacobian $$H$$ is simply the 5x5 identity matrix.
 
 #### Prediction Step
 We predict the state at time $$k$$:
+
 $$ \begin{align*}
 \hat{x}_k^- = f(\hat{x}_{k-1}, u_k)
 \end{align*}$$
@@ -491,6 +500,7 @@ $$ \begin{align*}
 $$ \begin{align*}
 P_k = F_k P_{k-1} F_k^T + Q_k
 \end{align*}$$
+
 and compute the predicted covariance $$P_k$$ of the state estimate. 
 
 This Prediction step is done in the predict(self, u) function. 
@@ -525,21 +535,25 @@ This Prediction step is done in the predict(self, u) function.
 
 #### Update Step
 % Kalman Gain Calculation
+
 $$ \begin{align*}
 K_k = P_k H_k^T(H_k P_k H_k^T + R_k)^{-1}
 \end{align*}$$
 
 % State Update
+
 $$ \begin{align*}
 \hat{x}_k = \hat{x}_k + K_k(z_k - h(\hat{x}_k))
 \end{align*}$$
 
 % Covariance Update
+
 $$ \begin{align*}
 P_k = (I - K_k H_k)P_k
 \end{align*}$$
 
 % Jacobian Matrices
+
 $$ \begin{align*}
 F_k = \left.\frac{\partial f}{\partial x}\right|_{\hat{x}_{k-1}, u_k}
 
