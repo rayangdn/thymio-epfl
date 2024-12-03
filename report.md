@@ -58,8 +58,8 @@ We aims to develop an autonomous navigation system for the Thymio robot that can
 Our team consists of four first-year Master's students in Robotics at EPFL:
 
 | Name            | SCIPER  |
-|---------------- |---------|
-| David XXX       | XXXX    |
+|----------------  |---------|
+| David Kejik      | 347530  |
 | Ines Altemir Mariñas  | 344399 |
 | Michel Abela    | 339421  |
 | Rayan Gauderon  | 347428  |
