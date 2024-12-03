@@ -19,9 +19,9 @@ MIN_TRANSLATION_SPEED = 100 # Minimum forward speed in motor units
 MAX_TRANSLATION_SPEED = 200 # Maximum forward speed in motor units
 
 # Obstacle avoidance parameters
-OBSTACLES_MAX_ITER = 1 # Number of iterations to perform avoidance after detection
+OBSTACLES_MAX_ITER = 5 # Number of iterations to perform avoidance after detection
 OBSTACLES_SPEED = 100  # Base speed during obstacle avoidance
-SCALE_SENSOR = 200    # Scaling factor for sensor readings
+SCALE_SENSOR = 300    # Scaling factor for sensor readings
 # Sensor weights for left and right motor adjustments
 WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]  # Positive weights favor right turn
 WEIGHT_RIGHT = [-5, -8, -10, 8,  5]   # Positive weights favor left turn

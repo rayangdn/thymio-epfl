@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils import utils
 
 # Extra distance added to obstacles for collision avoidance
-SECURITY_MARGIN = 60 # mm
+SECURITY_MARGIN = 50 # mm
 
 class GlobalNav:
     def __init__(self):

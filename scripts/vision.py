@@ -243,7 +243,9 @@ class Vision():
         visualization_steps['Obstacles image'] = obstacles_frame
         return obstacles_corners, obstacles_frame, visualization_steps
     
-    def get_perspective_parameters(self, world_width, world_height):
+    def get_perspective_parameters(self, world_map):
+        # Get world map dimensions
+        world_width, world_height = world_map[0], world_map[1]
         # Calculate perspective transform until successful
         while self.perspective_matrix is None:
             found_corners = False
