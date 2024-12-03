@@ -360,13 +360,11 @@ The combination of these processing steps creates a robust obstacle detection sy
 ✓ Minimizes false detections through filtering
 
 ## Global navigation
-The aim of global navigation is to find a collision-free optimal path from the start position to the goal position. This is a strategic task. To this end, we must gather a global map of the environment, a start and goal position (obtained from the camera at the initialization/beginning) , a path planning algorithm (Djikstra's algorithm in our case) and a path following module (name??). ((Furthermore, optimality can be defined with respect to different criteria, such as length, execution time, energy consumption and more. In our case, the visibility ???))
+The aim of global navigation is to find a collision-free optimal path from the start position to the goal position. This is a strategic task. To this end, we must gather a global map of the environment, a start and goal position (obtained from the camera at the beginning) , a path planning algorithm (Djikstra's algorithm in our case) and a path following module (name??). ((Furthermore, optimality can be defined with respect to different criteria, such as length, execution time, energy consumption and more. In our case, the visibility ???))
 
 This function is fulfilled by the Global Navigation module.
 
 We possess a model of the environment, with some initial "fixed/permanent" obstacles. These obstacles are assumed to be permanent for the duration of the trial. Nonetheless, this does not mean all obstacles are included, as some unexpected (unrecorded) physical obstacles can be put in the map in the robot's path at any point in time, and the Local Navigation module is reponsible for avoiding a collision and returning/recomputing a global path.
-
-The path finding is done in two parts :  the creation of the visibility graph and the computing of the optimal(??) path. 
 
 ((Questions: Do we need to take into account geometry,
 kinematics constraints, and/or the dynamics of the robot?
@@ -374,24 +372,118 @@ kinematics constraints, and/or the dynamics of the robot?
 
 1. Image of map, with obstacles, start, end !!!
 
+The path planning process consists of three main components:
+1. Obstacle processing with safety margins
+2. Visibility graph construction
+3. Shortest path computation
+
+### Obstacle Processing
+
+Before constructing the visibility graph, we extend all obstacles by a safety margin to ensure the robot maintains a safe distance during navigation:
+
+```python
+def _extend_obstacles(self, corners, thymio_width):
+    # Calculate obstacle centroid
+    center = np.mean(corners, axis=0)
+    extended_corners = np.zeros_like(corners)
+    
+    # Extend each corner outward from center
+    for i in range(len(corners)):
+        vector = corners[i] - center
+        length = np.linalg.norm(vector)
+        
+        if length > 0:
+            # Normalize and scale vector by robot width plus margin
+            normalized_vector = vector / length
+            extended_corners[i] = corners[i] + normalized_vector * (thymio_width//2 + SECURITY_MARGIN) 
+            
+    return extended_corners
+```
+
+The obstacle extension process:
+- Calculates the centroid of each obstacle
+- Extends each corner outward from the centroid
+- Adds a security margin plus half the robot's width
+- Ensures safe clearance during navigation
+
+<p align="center">
+<img src="img/global_nav/extended_obstacles.png" width="500" alt="extended obstacles">
+</p>
+
+
 ### Visibility Graph
-First of all, for the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. To this end, we utilize the PyVisGraph library, who given a set of simple obstacle polygons, builds a visibility graph. The reason behind the use of this module is due to its already optimized functioning and the ease of implementation (ARGUE CHOICE OF VISIBILITY GRAPHS??). Furthermore, this same module possesses a shortest_path() function. This approach guarantees finding the shortest geometric path between start and goal. 
+First of all, for the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. To this end, we utilize the PyVisGraph library (https://github.com/TaipanRex/pyvisgraph), who given a set of simple obstacle polygons, builds a visibility graph. The reason behind the use of this module is due to its already optimized functioning and the ease of implementation (ARGUE CHOICE OF VISIBILITY GRAPHS??). Furthermore, this same module possesses a shortest_path() function. This approach guarantees finding the shortest geometric path between start and goal. 
 
 In the _compute_trajectory(self, obstacles_pos, thymio_pos, goal_pos) function, we use the build() method of the PyVisGraph class to compute the graph. This method takes a list of PyVisGraph polygons. 
-#### Build visibility graph
+
+#### Visibility Graph Construction
+
+The visibility graph is constructed using the following steps:
+
+1. **Point Conversion**: Convert robot position, goal position, and obstacle corners to visibility graph points:
+```python
+# Create pyvisgraph points for start and goal
+start = vg.Point(thymio_pos[0], thymio_pos[1])
+end = vg.Point(goal_pos[0], goal_pos[1])
+
+# Convert obstacles to pyvisgraph format
+polygon_obstacles = []
+for obstacle in obstacles:
+    polygon = []
+    for point in obstacle:
+        polygon.append(vg.Point(point[0], point[1]))
+    polygon_obstacles.append(polygon)
+```
+
+2. **Graph Building**: Create edges between mutually visible vertices:
+```python
+# Create visibility graph and find shortest path
+graph = vg.VisGraph()
+graph.build(polygon_obstacles, status=False)
+```
         graph = vg.VisGraph()
         graph.build(polygon_obstacles, status=False)
-The way build() creates the graph is by identifying all vertices, and then connecting pairs of vertices with edges if the straight line between them doesn't intersect any polygon obstacles.
+The way build() creates the graph is by identifying all vertices (including start and goal positions), and then connecting pairs of vertices with edges if the straight line between them doesn't intersect any polygon obstacles.
 
 This list pf PyVisGraph polygons is constructed from a list of points array defining the shape of all the obstacles. Before handing these obstacles to the Visibility Graph build() method, we must perform an a priori expansion of obstacles, taking into account the dimensions/geometry of the Thymio Robot and a security margin, for our algorithm to be implemented robustly. This is done in the _extend_obstacles(self, corners, thymio_width) function, with the SECURITY_MARGIN = 60 #mm, whose has value has been empirically proven to be sufficient to not graze obstacles. This additional step is necessary due to the fact our technique make the assumption of a mass-less, holonomic, pointlike robot (DOES OUR COMPUTER VISION DO THAT??). 
+
+improvemen: visibility graph has no notion of the map borders, so even if an obstacle is close to the border, it could go out of the map to reach the goal. if we try to implement a condition to always stay inside the map, the extended corner of the obstacle will be out of the map and thus considered non existent, and the robot will go right over the obstacle
   
 ### Path Planning 
 After having created the visibility graph, we can employ the shortest_path() method in the PyVisGraph class. This method uses the Dijkstra algorithm to compute the optimal path with a given start and goal position. This is done in the _compute_trajectory(self, obstacles_pos, thymio_pos, goal_pos) function.
 
 2. IMAGE OF COMPUTED GLOBAL PATH WITHS OBSTACLES !!!
 
-Finally, the get_trajectory(self, img, thymio_pos, goal_pos, obstacles_pos, thymio_width, scale_factor) function combines everything and handles the visualization. 
+```python
+shortest_path = graph.shortest_path(start, end)
 
+# Calculate total path length
+path_length = 0
+for i in range(len(shortest_path) - 1):
+    p1, p2 = shortest_path[i], shortest_path[i + 1]
+    path_length += ((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2) ** 0.5
+```
+
+The path computation:
+- Finds the shortest sequence of edges connecting start to goal
+- Calculates the total path length 
+- Returns a series of waypoints for the robot to follow
+
+<p align="center">
+<img src="img/global_nav/trajectory.png" width="500" alt="extended obstacles">
+</p>
+
+Finally, the get_trajectory(self, img, thymio_pos, goal_pos, obstacles_pos, thymio_width, scale_factor) function combines everything and handles the visualization.
+
+### Key Features
+
+Our global navigation implementation provides several important capabilities:
+
+✓ Shortest path planning through visibility graph approach \
+✓ Automatic safety margin calculation based on robot size \
+✓ Path computation and visualization \
+✓ Integration with vision system coordinates \
+✓ Support for arbitrary obstacle shapes and positions
 
 ### Considerations/Assumptions made and potential improvements
 - The computational complexity of this implementation (VisGraph creation) is O(n²log n) where n is the number of vertices ###IMPROV !!!REF. This is acceptable for static environments with relatively few obstacles, but could be problematic for highly complex or dynamic environments ###IMPROV. Alternative approaches could have been: (1) Rapidly-exploring Random Trees (RRTs) - better for dynamic environments (2) Potential Fields - simpler but can get stuck in local minima (3) Grid-based methods (A*, D*) - easier to implement but less smooth paths ---> higher contraint regarding motion control, magnification of motion control error
@@ -449,9 +541,10 @@ Once the Thymio avoided an obstacle, to make sure it is completely gone, the rob
 - We assume a static world and focus on estimating only the pose of a kinematic mobile robot
 - The widely used approximations are: Linearization and parametrization for Gaussian filters. The EKF, when performing localization, has the motion and measurement models linearized (using the Jacobian matric)
 
-The filtering module's core purpose is robust state estimation for robot localization by fusing multiple data sources, both the computer vision positioning data and the wheel odometry obtained from the Thymio. Furthermore, it possesses a fallback capability, as it maintains position tracking using odometry when vision data is unavailable/unreliable, be it because the camera is covered or because the computer vision submodule is malfunctioning. 
+The filtering module's core purpose is robust state estimation for robot localization by fusing multiple data sources, both the computer vision positioning data and the wheel odometry obtained from the Thymio. 
+Furthermore, it possesses a fallback capability, as it maintains accurate tracking of the robot's pose and velocities using odometry when vision data is unavailable/unreliable, be it because the camera is covered or because the computer vision submodule is malfunctioning. 
 
-It performs the state estimation of the differential-drive robot, tracking robot pose (x, y, θ) and linear and angular velocity (v, w) using a nonlinear motion model. We employ a simplified discrete time state space model, assuming a sufficiently small timestep:
+It performs the state estimation of the differential-drive robot, tracking robot pose (x, y, θ) and linear and angular velocity (v, w) using a nonlinear motion model. We employ a simplified discrete time state space model, assuming a sufficiently small timestep. The state transition equations are:
 
 $$ \begin{align*} 
 x_{i+1} &= x_i + v_i \cdot \Delta t \cdot \cos(\theta_i) \\ 
@@ -460,6 +553,8 @@ y{i+1} &= y_i + v_i \cdot \Delta t \cdot \cos(\theta_i)\\
 v{i+1} &= v_i \\
 \omega_{i+1} &= \omega_i 
 \end{align*} $$
+
+where $\Delta t$ is the time step between updates.
 
 EXPLAIN WE DON'T VARY (FIXED) V AND W between two segments, two control inputs.
 Since the model that we have chosen is nonlinear with respect to the orientation of the robot, standard Kalman filter formulation İs not sufficient. For this reason, we used the Extended Kalman Filter model.
@@ -479,16 +574,11 @@ $$
 
 where $$\hat{x}_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
 
-$$ \begin{align*}
-x =
-\begin{bmatrix}
-x \\
-y \\
-\theta \\
-v \\
-\omega
-\end{bmatrix}
-\end{align*}$$
+The filter maintains a state vector containing the robot's position (x, y), orientation (θ), and velocities (v, ω):
+
+$$
+x = \begin{bmatrix} x & y & \theta & v & \omega \end{bmatrix}^T
+$$
 
 
 This nonlinear state transition function $$f$$ is: 
@@ -543,6 +633,7 @@ v{\textrm{sensor}}\\
 and the measurement Jacobian $$H$$ is simply the 5x5 identity matrix.
 
 #### Prediction Step
+The prediction step uses the differential drive model to estimate the robot's next state. The wheel velocities serve as control inputs. 
 We predict the state at time $$k$$:
 
 
@@ -558,34 +649,41 @@ P_k = F_k P_{k-1} F_k^T + Q_k
 and compute the predicted covariance $$P_k$$ of the state estimate. 
 
 This Prediction step is done in the predict(self, u) function. 
+```python
+def predict(self, u):
+    # Extract current state
+    x, y, theta, _, _ = self.state
+    v_l, v_r = u
+    
+    # Compute robot velocities from wheel speeds
+    v = (v_l + v_r) / 2  # Linear velocity
+    omega = (v_l - v_r) / self.wheel_base  # Angular velocity
+    
+    # Predict next state using nonlinear motion model
+    x_next = x + v * np.cos(theta) * self.dt
+    y_next = y + v * np.sin(theta) * self.dt
+    theta_next = theta + omega * self.dt
+    v_next = v
+    omega_next = omega
+```
 
-        # Extract states
-        x, y, theta, _, _ = self.state
-        v_l, v_r = u
-        
-        v, omega = self._compute_velocity(v_l, v_r)
-        
-        # Predict next state using motion model
-        x_next = x + v * np.cos(theta) * self.dt
-        y_next = y + v * np.sin(theta) * self.dt
-        theta_next = theta + omega * self.dt
-        v_next = v
-        omega_next = omega
-        
-        self.state = np.array([x_next, y_next, theta_next, v_next, omega_next])
-        
-        # Compute Jacobian of state transition
-        F = np.eye(self.n)
-        F[0, 2] = -v * np.sin(theta) * self.dt
-        F[0, 3] = np.cos(theta) * self.dt
-        F[1, 2] = v * np.cos(theta) * self.dt
-        F[1, 3] = np.sin(theta) * self.dt
-        F[2, 4] = self.dt
-        
-        # Update covariance
-        self.P = F @ self.P @ F.T + self.Q
+The Jacobian of the motion model is computed for covariance propagation:
+
+$$
+F = \begin{bmatrix} 
+1 & 0 & -v\sin(\theta)\Delta t & \cos(\theta)\Delta t & 0 \\
+0 & 1 & v\cos(\theta)\Delta t & \sin(\theta)\Delta t & 0 \\
+0 & 0 & 1 & 0 & \Delta t \\
+0 & 0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 0 & 1
+\end{bmatrix}
+$$
 
 #### Update Step
+
+While our system uses an Extended Kalman Filter due to the nonlinear motion model in the prediction step, our measurement model is actually linear. This is because our vision system and wheel encoders directly observe the state variables without any nonlinear transformations:
+
+
 % Kalman Gain Calculation
 
 $$ \begin{align*}
@@ -614,168 +712,119 @@ $$ \begin{align*}
 H_k = \left.\frac{\partial h}{\partial x}\right|_{\hat{x}_k}
 \end{align*}$$
 
-We implement this in the following function update(self, measurement):
-        
-        measurement[3], measurement[4] = self._compute_velocity(measurement[3], measurement[4])
-        
-        # Measurement matrix 
-        H = np.eye(self.n)
-        
-        # Compute Kalman gain
-        S = H @ self.P @ H.T + self.R
-        K = self.P @ H.T @ np.linalg.inv(S)
-        
-        # Update state and covariance
-        y = measurement - self.state
-        
-        # Normalize angle difference [-pi, pi]
-        y[2] = np.arctan2(np.sin(y[2]), np.cos(y[2]))
-        
-        self.state = self.state + K @ y
-        self.P = (np.eye(self.n) - K @ H) @ self.P
+We implement this in the following function:
+```python
+def update(self, measurement):
+    # Convert wheel velocities to robot velocities
+    measurement[3], measurement[4] = self._compute_velocity(measurement[3], measurement[4])
+    
+    # Linear measurement model - direct observation of states
+    H = np.eye(self.n)  # Identity matrix because measurements directly correspond to states
+    
+    # Compute Kalman gain and update state
+    S = H @ self.P @ H.T + self.R
+    K = self.P @ H.T @ np.linalg.inv(S)
+    
+    # Calculate measurement residual
+    y = measurement - self.state
+    
+    # Normalize angle difference to [-π, π]
+    y[2] = np.arctan2(np.sin(y[2]), np.cos(y[2]))
+
+    # Update state estimate and covariance
+    self.state = self.state + K @ y
+    self.P = (np.eye(self.n) - K @ H) @ self.P
+```
+
+Our measurement model is linear because:
+1. The vision system directly measures position and orientation (x, y, θ)
+2. The wheel encoders, after conversion via `_compute_velocity()`, directly provide robot velocities (v, ω)
+
+Therefore, our measurement equation simplifies to:
+$$z_k = Hx_k + v_k, \quad v_k \sim \mathcal{N}(0, R_k)$$
+where:
+- $H = I$ 
+- $z_k = [x, y, \theta, v, \omega]^T$ (direct measurements)
+- $x_k = [x, y, \theta, v, \omega]^T$ (state vector)
+- $v_k$ is the measurement noise with covariance $R_k$
+  
+The update equations are:
+
+1. **Innovation (Measurement Residual)**:
+   $$y_k = z_k - Hx_{k|k-1}$$
+
+2. **Innovation Covariance**:
+   $$S_k = HP_{k|k-1}H^T + R_k$$
+
+3. **Kalman Gain**:
+   $$K_k = P_{k|k-1}H^TS_k^{-1}$$
+
+4. **State Update**:
+   $$x_{k|k} = x_{k|k-1} + K_ky_k$$
+   $$P_{k|k} = (I - K_kH)P_{k|k-1}$$
+
+This is a special case of the EKF where:
+- The prediction step requires linearization due to nonlinear motion dynamics
+- The update step simplifies to standard Kalman filter equations due to linear measurements
+
+This hybrid approach maintains the EKF's ability to handle nonlinear motion while benefiting from the computational simplicity of linear measurements.
 
 #### Noise Covariance Matrices
-In the aim of obtaining the values of the process noise covariance $$Q$$ and measurement noise covariance $$R$$ matrices, we have performed extensive experiments. 
+The filter's performance is tuned through two key noise covariance matrices: the process noise covariance $$Q$$ and measurement noise covariance $$R$$ matrices.
+We have performed experiments in the aim of obtaining these values.
 Such set-up and results are found in the run_test.ipynb notebook. 
 
-In this notebook, we first perform a speed conversion test, which allows us to determine the value of SPEED_TO_MM_S = 2.9466 (??)
+In this notebook, we first perform a speed conversion test, which allows us to determine the value of SPEED_TO_MM_S = 2.9466 (?? CHANGE)
 
-Afterward, we perform a camera covariance test, representing the measurement error on x, y and theta. For this task, we collect a sample of 500 camera photographs of the a given map configuration, obstacle selection and robot position. Using our Vision module to obtain the Thymio position and orientation from such a frame, we then compute the Covariance on x, y and theta. 
 ##### Camera Noise Covariance Test 
+To represent the measurement error on x, y and theta. For this task, we collect a sample of 500 camera photographs of the a given map configuration, obstacle selection and robot position. Using our Vision module to obtain the Thymio position and orientation from such a frame, we then compute the Covariance on x, y and theta. 
 
-    n_samples = 500
-    positions = np.zeros((n_samples, 2))  # For x,y positions
-    orientations = np.zeros(n_samples)    # For orientation values
-    
-    try:
-        vision.connect_webcam()
-       
-        print("Collecting camera data...")
-        vision.get_perspective_parameters(WORLD_WIDTH, WORLD_HEIGHT)
-        found_thymio = False
-        for i in tqdm(range(n_samples)):
-            _, process_frame = vision.get_frame()
-            frame, thymio_pos, found_thymio = vision.get_thymio_position(process_frame)
-            if found_thymio:
-                positions[i] = thymio_pos[:2] # Store x,y positions
-                orientations[i] = thymio_pos[2] # Store orientation values
-            else:
-               # We want 500 samples, so if we don't find the Thymio, we need to go back one step
-                i -= 1
-            time.sleep(DT)
-
-The odometry measurement noise on the linear velocity $$v$$  is established by performing 5 trials at 6 selected target values of the speed. The targed_speeds are communicated to the Thymio as a control input set_motor_speed(target_v, target_v), having the left and right velocity equal to the target velocity. Finally, we collect the Thymio's odometry values with: left, right = get_motor_speed(). We therefore obtain the error distribution at different target speeds. 
 ##### Odometry Noise Covariance Test
-    all_samples = []
-    target_speeds = [100, 120, 140, 160, 180, 200]
-    
-    for target_v in target_speeds:
-        input(f"Press enter for speed {target_v}...")
-        for i in range(5):
-            input("Press enter for next trial...")
-            print(f"Testing speed: {target_v}, trial {i + 1}")
-            clear_output(wait=True)
-            set_motor_speed(target_v, target_v)
-            time.sleep(1)  # Stabilize
-            
-            samples = []
-            for _ in range(50):
-                left, right = get_motor_speed()
-                v = (left + right) / 2
-                samples.append(v)
-                time.sleep(DT)
-
+The odometry measurement noise on the linear velocity $$v$$  is established by performing 5 trials at 6 selected target values of the speed. The targed_speeds are communicated to the Thymio as a control input set_motor_speed(target_v, target_v), having the left and right velocity equal to the target velocity. Finally, we collect the Thymio's odometry values with: left, right = get_motor_speed(). We therefore obtain the error distribution at different target speeds. 
 A similar approach is followed to compute the measurement noise on the angular velocity $$\omega$$. This also forms part of the odometry measurement error. 
 
-Thanks to the experiments done, we can therefore define, at the beginning of the extended_kalman_filter.py file: 
+**Measurement Noise (R)**: Adapts based on camera visibility:
+   ```python
+   # Camera visible - normal measurement uncertainty
+   R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 
+                         35.8960, 154.1675])
+   
+   # Camera occluded - high position/orientation uncertainty
+   R_COVERED = np.diag([9999999, 9999999, 9999999, 
+                       35.8960, 154.1675])
+   ```
+ 
 
-Values obtained in run_tests.ipynb
-R_COVERED = np.diag([9999999, 9999999, 9999999, 35.8960, 154.1675]) # No measurement from camera
+Due to the fact that the camera vision can be covered, we define two different measurement noise covariance matrices $$R$$, more precisely $$R_{covered}$$ and $$R_{uncovered}$$. When the camera is covered, and therefore camera measurements aren't available, the measurement noise covariance for position and orientation increases significantly, causing the filter to rely more heavily on wheel odometry. This effectively tells the Kalman filter to ignore any position/orientation measurements during these periods and rely solely (??) on the motion model prediction and odometry measurements. This is a common technique in Kalman filtering when certain sensors become temporarily unavailable - setting their corresponding measurement uncertainties to very high values effectively disables their influence on the state estimate.
 
-R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 35.8960, 154.1675])
-
-Due to the fact that the camera vision can be covered, we define two different measurement noise covariance matrices $$R$$, more precisely $$R_{COVERED}$$ and $$R_{UNCOVERED}$$. When the camera is covered, and therefore camera measurements aren't available, the measurement noise covariances on (x, y , theta) are set to near-infinite values. This effectively tells the Kalman filter to ignore any position/orientation measurements during these periods and rely solely on the motion model prediction and odometry measurements. This is a common technique in Kalman filtering when certain sensors become temporarily unavailable - setting their corresponding measurement uncertainties to very high values effectively disables their influence on the state estimate.
 There is a method in the extended_kalman_filter.py file to detect this covering of the camera and set the measurement noise covariance matrix to the corresponding value:
 
+```python
 def set_mode(self, covered):
         if covered:
             self.R = R_COVERED # No measurement from camera
         else:
             self.R = R_UNCOVERED # Measurement from camera
-
+  ```
+##### Process Noise Covariance Test
 For the Process noise covariance matrix $$Q$$, we perform two tests: for the process noise on the position (x,y) and the linear velocity v, and for the process noise on the orientation theta and the angular velocity $$\omega$$. As we have already computed the camera measurement noise, and have verified that it has very low values, for the following tests we will assimilate the computer vision to the ground truth, and use it to compute the process noises. 
 
 The x,y and v process noise covariance test is done in the following manner. We have a selection of target speeds, and for each value we do 5 trials. At each target speed, we set the motor speed to that target, let the robot move during a certain timespan, collect the actual_position of the robot at different timestamps through the camera vision, and analytically compute the expected_position of the robot at each timestamps using the state transition model detailed previously. With these two values, we can compute the process variance on x, y and v. 
-
-      target_speeds = [100, 120, 140, 160, 180, 200]
-      #all_variances = {speed: [] for speed in target_speeds}
-      # MODIFICATION
-      all_variances = {speed: {'pos': [], 'vel': []} for speed in target_speeds}
-      
-      for speed in target_speeds:
-          input(f"Testing speed {speed}...")
-          for trial in range(5):
-              motor_stop()
-              clear_output(wait=True)
-              input(f"Trial {trial + 1}: Place robot at start, press enter...")
-              print(f"Testing speed: {speed}, trial {trial + 1}")
-              found_thymio = False
-              vision.flush()
-              while not found_thymio:
-                  _, process_frame = vision.get_frame()
-                  _, initial_pos, found_thymio = vision.get_thymio_position(process_frame)
-              set_motor_speed(speed, speed)
-              time.sleep(1)
-              
-              expected_positions = []
-              actual_positions = []
-              # MODIFICATION
-              actual_velocities = []
-              t = 0
-              last_pos = initial_pos[:2]
-              last_time = time.time()
-              
-              for _ in range(30):
-                  current_time = time.time()
-                  _, frame = vision.get_frame()
-                  _, pos, found = vision.get_thymio_position(frame)
-                  if found:
-                      expected_x = initial_pos[0] + speed / SPEED_TO_MM_S * np.cos(pos[2]) * t
-                      expected_y = initial_pos[1] + speed / SPEED_TO_MM_S * np.sin(pos[2]) * t
-                      expected_positions.append([expected_x, expected_y])
-                      actual_positions.append(pos[:2])
-  
-                      # Calculate actual velocity
-                      dt = current_time - last_time
-                      if dt > 0:
-                          dx = pos[0] - last_pos[0]
-                          dy = pos[1] - last_pos[1]
-                          actual_v = np.sqrt(dx**2 + dy**2) / dt
-                          actual_velocities.append(actual_v)
-                      
-                      last_pos = pos[:2]
-                      last_time = current_time
-  
-                  t += DT
-                  time.sleep(DT)
-              
-              motor_stop()
-              diffs = np.array(actual_positions) - np.array(expected_positions)
-              print(f"Differences - X: {np.mean(diffs[:, 0]):.4f}, Y: {np.mean(diffs[:, 1]):.4f}")
-              
-              position_var = np.var(diffs, axis=0)
-              all_variances[speed].append(position_var)
-  
-              # Velocity variance calculation
-              target_v = speed / SPEED_TO_MM_S  # Convert to mm/s
-              velocity_diffs = np.array(actual_velocities) - target_v
-              velocity_var = np.var(velocity_diffs)
-
 Finally, for the orientation theta and angular velocity w process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
             
-Values obtained in run_tests.ipynb
-Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
+ **Process Noise (Q)**: Models uncertainty in the motion model:
+   ```python
+   Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
+   ```
+   The larger values for position states reflect greater uncertainty in motion prediction.
+   
+#### Key Features
 
+Our EKF implementation provides several important capabilities:
+
+✓ Fusion of visual and odometric measurements \
+✓ Robust state estimation  \
+✓ Smooth trajectory estimation for control
 
 ## Motion Control
 
