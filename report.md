@@ -781,12 +781,12 @@ Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
 
 The motion control system integrates all our implemented modules to effectively guide the Thymio robot:
 
-1. The Vision System and Odometry provide input to the Extended Kalman Filter for accurate state estimation
-2. Global Navigation uses the filtered state to plan optimal paths around known obstacles
-3. Local Navigation combines the planned path with real-time sensor data to avoid unexpected obstacles
+1. The **Vision System** and **Odometry** (🟨) provide input to the **Extended Kalman Filter**(🟪) for accurate state estimation
+2. **Global Navigation** (🟧) uses the filtered state to plan optimal paths around known obstacles
+3. **Local Navigation** (🟩) combines the planned path with real-time sensor data to avoid unexpected obstacles
 4. The Controller converts navigation commands into appropriate motor speeds for the Thymio robot
 
-This integrated approach allows for robust autonomous navigation while handling both static and dynamic obstacles in the environment:
+This integrated approach allows for robust autonomous navigation while handling both static and dynamic obstacles in the environment.
 
 <p align="center">
 <img src="img/motion_control/motion_control.svg" width="500" alt="motion_control">
