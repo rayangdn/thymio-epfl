@@ -72,13 +72,50 @@ The project responsibilities are distributed to maximize efficiency while ensuri
 - **Robot Control and Localization**: All team members
 - **System Integration and Testing**: All team members
 
-# Introduction
+## Introduction
 
 Mobile robots that can move on their own are becoming more common in our daily lives, from robots that move boxes in warehouses to those that help at home. One of the main challenges for these robots is finding their way around while avoiding obstacles that might appear in their path.
 
 In this project, we work with the Thymio II robot to create a system that helps it move safely from one point to another. Our solution combines two main ways of navigation: planning a full path ahead of time (using a map), and reacting to new obstacles that weren't there before (when someone puts something in the robot's way).
 
-The project puts into practice many important ideas we learned in class: using cameras for seeing, creating paths for the robot to follow, keeping track of where the robot is, and making the robot move around obstacles. By bringing all these parts together, we've created a robot that can find its way around while dealing with changes in its environment.
+### Experimental Setup and Design Choices
+
+Our experimental environment consists of a well-defined workspace measuring 120x100 centimeters, providing ample space for navigation while maintaining a controlled testing environment. We implemented several key design choices to create a robust and reliable navigation system:
+
+**Localization System:**
+- Utilized ArUco markers for precise positioning
+- Markers serve multiple purposes:
+  - Defining the map boundaries
+  - Marking goal positions
+  - Tracking the Thymio robot's current position and orientation
+
+**Test Environment:**
+- Modular obstacle system featuring varying sizes (15-30cm)
+- Flexible configuration allowing for different testing scenarios
+- High-contrast surface to ensure reliable visual detection
+
+**Path Planning Strategy:**
+- Implemented a visibility graph approach, optimized for environments with polygonal obstacles
+
+- Key components of the visibility graph algorithm:
+  - Creates nodes from robot's starting position, obstacle vertices, and goal position
+  - Establishes edges between mutually visible nodes (no obstacle intersections)
+  - Applies Dijkstra's algorithm to determine the shortest viable path
+
+
+**Control Strategy:**
+- Developed a proportional control system with dual feedback mechanisms:
+  - Dynamically adjusts both linear and angular velocities
+  - Maintains smooth transitions between movement phases
+  
+- Distance-based speed control features:
+  - Proportionally reduces linear velocity as robot nears goal
+  - Includes safety thresholds for minimum/maximum speeds
+
+- Orientation-based control characteristics:
+  - Modulates linear velocity based on angle to target
+  - Applies proportional angular velocity corrections
+  - Prioritizes orientation alignment before forward movement
 
 ### Project Demonstration
 
@@ -741,6 +778,19 @@ Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
 
 
 ## Motion Control
+
+The motion control system integrates all our implemented modules to effectively guide the Thymio robot:
+
+1. The Vision System and Odometry provide input to the Extended Kalman Filter for accurate state estimation
+2. Global Navigation uses the filtered state to plan optimal paths around known obstacles
+3. Local Navigation combines the planned path with real-time sensor data to avoid unexpected obstacles
+4. The Controller converts navigation commands into appropriate motor speeds for the Thymio robot
+
+This integrated approach allows for robust autonomous navigation while handling both static and dynamic obstacles in the environment:
+
+<p align="center">
+<img src="img/motion_control/motion_control.svg" width="500" alt="motion_control">
+</p>
 
 ## Conclusion
 
