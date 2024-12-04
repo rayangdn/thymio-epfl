@@ -171,6 +171,7 @@ k_1 & k_2 & p_1 & p_2 & k_3
 \end{matrix}\right)
 $$
 
+### Utilization
 Once calibrated, we can undistort any frame from our camera providing a more accurate representation of the scene for subsequent vision processing steps:
 
 ```python
@@ -260,6 +261,8 @@ This transformation allows us to:
 - Convert camera coordinates to real-world coordinates
 - Obtain accurate measurements for robot navigation
 - Simplify obstacle detection and path planning algorithms
+
+GIVE A PICTURE OF THE PROCESS
 
 ### Obstacle Detection
 
@@ -354,7 +357,6 @@ Finally, the detected obstacle corners are converted from pixel coordinates to m
 
 ### Keys Features
 The combination of these processing steps creates a robust obstacle detection system that:
-
 
 ✓ Works reliably under varying lighting conditions \
 ✓ Handles obstacles of different shapes and sizes \
@@ -639,7 +641,7 @@ The local navigation system achieves several important performance metrics:
 
 
 <p align="center">
-<img src="img/local_nav/local_nav_map.svg" width="500" alt="local_nav_mindmap">
+<img src="img/local_nav/local_nav_map.svg" width="700" alt="local_nav_mindmap">
 </p>
 
 
@@ -945,7 +947,7 @@ The motion control system integrates all our implemented modules to effectively 
 This integrated approach allows for robust autonomous navigation while handling both static and dynamic obstacles in the environment.
 
 <p align="center">
-<img src="img/motion_control/motion_control.svg" width="500" alt="motion_control">
+<img src="img/motion_control/motion_control.svg" width="700" alt="motion_control">
 </p>
 
 ## Conclusion
