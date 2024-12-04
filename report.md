@@ -171,7 +171,8 @@ k_1 & k_2 & p_1 & p_2 & k_3
 \end{matrix}\right)
 $$
 
-### Utilization
+#### Utilization
+
 Once calibrated, we can undistort any frame from our camera providing a more accurate representation of the scene for subsequent vision processing steps:
 
 ```python
@@ -269,7 +270,7 @@ GIVE A PICTURE OF THE PROCESS
 Our obstacle detection system combines Canny edge detection and contour finding from OpenCV to identify obstacles in the environment. The implementation is based on [OpenCV's Canny Edge Detection](https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html) and [Contour Detection](https://docs.opencv.org/3.4/d4/d73/tutorial_py_contours_begin.html) tutorials. A typical environment with different shape obstacles can be seen below:
 
 <p align="center">
-<img src="img/vision/obstacles/obstacles.jpg" width="500" alt="obstacles">
+<img src="img/vision/obstacles/environment.png" width="500" alt="obstacles">
 </p>
 
 #### Processing Pipeline
@@ -363,6 +364,13 @@ The combination of these processing steps creates a robust obstacle detection sy
 ✓ Provides accurate position information in real-world coordinates \
 ✓ Minimizes false detections through filtering
 
+### Future Improvements
+The current vision system could be improve to handle more realistic scenarios by:
+
+* Replacing binary color detection (black/white) with object detection ML models like [YOLOv8](https://yolov8.com/) to support varied colors, more complex shapes and textures
+* Removing ArUco marker dependency by implementing [Visual SLAM](https://cvg.cit.tum.de/research/vslam)
+* Adding support for dynamic obstacles by implementing real-time tracking and trajectory prediction
+
 
 ## Global navigation
 The aim of global navigation is to find a collision-free optimal path from the start position to the goal position. This is a strategic task. To this end, we must gather a global map of the environment, a start and goal position (obtained from the camera at the beginning) , a path planning algorithm (Djikstra's algorithm in our case) and a path following module (name??). ((Furthermore, optimality can be defined with respect to different criteria, such as length, execution time, energy consumption and more. In our case, the visibility ???))
@@ -417,7 +425,7 @@ The obstacle extension process:
 
 
 ### Visibility Graph
-First of all, for the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. To this end, we utilize the PyVisGraph library (https://github.com/TaipanRex/pyvisgraph), who given a set of simple obstacle polygons, builds a visibility graph. The reason behind the use of this module is due to its already optimized functioning and the ease of implementation (ARGUE CHOICE OF VISIBILITY GRAPHS??). Furthermore, this same module possesses a shortest_path() function. This approach guarantees finding the shortest geometric path between start and goal. 
+First of all, for the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. To this end, we utilize the [Pyvisgraph library](https://github.com/TaipanRex/pyvisgraph), who given a set of simple obstacle polygons, builds a visibility graph. The reason behind the use of this module is due to its already optimized functioning and the ease of implementation (ARGUE CHOICE OF VISIBILITY GRAPHS??). Furthermore, this same module possesses a shortest_path() function. This approach guarantees finding the shortest geometric path between start and goal. 
 
 In the _compute_trajectory(self, obstacles_pos, thymio_pos, goal_pos) function, we use the build() method of the PyVisGraph class to compute the graph. This method takes a list of PyVisGraph polygons. 
 
@@ -490,6 +498,10 @@ Our global navigation implementation provides several important capabilities:
 ✓ Integration with vision system coordinates \
 ✓ Support for arbitrary obstacle shapes and positions
 
+<p align="center">
+<img src="img/global_nav/global_nav_map.svg" width="700" alt="extended obstacles">
+</p>
+
 ### Considerations/Assumptions made and potential improvements
 - The computational complexity of this implementation (VisGraph creation) is O(n²log n) where n is the number of vertices ###IMPROV !!!REF. This is acceptable for static environments with relatively few obstacles, but could be problematic for highly complex or dynamic environments ###IMPROV. Alternative approaches could have been: (1) Rapidly-exploring Random Trees (RRTs) - better for dynamic environments (2) Potential Fields - simpler but can get stuck in local minima (3) Grid-based methods (A*, D*) - easier to implement but less smooth paths ---> higher contraint regarding motion control, magnification of motion control error
   
@@ -507,8 +519,6 @@ execution time, energy consumption)? YES DIJSTRA + VIS GRAPH ENSURE shortest pat
 • Completeness: does the planner always find a solution when one exists? COMPLETENESS OF DIJSTRA??
 • Offline / online: Can the solution be computed in real time or is too heavy computationally? RUNTIME OF COMPUTATION OF GLOBAL PATH?? seems to be able to be computed in real time, as is recomputed for kidnapping case
 Note that most existing techniques make the assumption of a mass-less, holonomic, pointlike robot => may require low-level motion control (??) and a priori expansion of obstacles to be implemented robustly))
-
-## Local Navigation
 
 ## Local Navigation
 
