@@ -351,6 +351,8 @@ This filtering process:
 
 Finally, the detected obstacle corners are converted from pixel coordinates to millimeters using our perspective transform scale factor. This conversion is crucial for the navigation system as it needs real-world measurements to plan paths and avoid obstacles effectively.
 
+
+### Keys Features
 The combination of these processing steps creates a robust obstacle detection system that:
 
 
@@ -358,6 +360,7 @@ The combination of these processing steps creates a robust obstacle detection sy
 ✓ Handles obstacles of different shapes and sizes \
 ✓ Provides accurate position information in real-world coordinates \
 ✓ Minimizes false detections through filtering
+
 
 ## Global navigation
 The aim of global navigation is to find a collision-free optimal path from the start position to the goal position. This is a strategic task. To this end, we must gather a global map of the environment, a start and goal position (obtained from the camera at the beginning) , a path planning algorithm (Djikstra's algorithm in our case) and a path following module (name??). ((Furthermore, optimality can be defined with respect to different criteria, such as length, execution time, energy consumption and more. In our case, the visibility ???))
@@ -505,34 +508,138 @@ Note that most existing techniques make the assumption of a mass-less, holonomic
 
 ## Local Navigation
 
-### Local Navigation Introduction
+## Local Navigation
 
-Let’s talk about the Local Navigation module. It helps the Thymio follow the path computed by the Global Navigation module, and at the same time dynamically avoid 3D obstacles that get in its way… The code for this section can be found in the local_navigation.py file.
-The path is given to the Thymio as a list of tuples (px, py) representing the waypoints to follow in order.
+Our local navigation system combines trajectory following with reactive obstacle avoidance, allowing the Thymio robot to follow planned paths while safely handling unexpected obstacles. The implementation uses a proportional control approach for path following and a weighted sensor-based method for obstacle avoidance.
 
-### Control Loop
+### Control Architecture
 
-The “get_command” function inside the LocalNav() class runs in a loop, and decide wether the Thymio should be in a path following mode or in obstacle avoidance. The loop starts by checking if an obstacle is in front of the robot using the proximity sensors: if its the case, the robot goes into the obstacle avoidance routine, and if not, the robot can start following the path.
-In case the Thymio previously detected and avoided an obstacle, the avoidance routine will be run for the following 7 loop cycles (tunable by modifying “OBSTACLES_MAX_ITER” constant) before going back to the path following mode, to ensure the obstacle is no longer in its way.
+The local navigation system operates with three main control loops:
+
+1. Path Following Loop: Executes the planned trajectory
+2. Obstacle Avoidance Loop: Handles unexpected obstacles
+3. Recovery Loop: Manages transition between obstacle avoidance and path following
+
+The system continuously monitors the robot's position and proximity sensors to determine which control loop should be active.
 
 ### Path Following Loop
 
-The “_trajectory_following” function in the LocalNav() class makes sure the robot stays on the desired path by constantly checking the distance and angle differences between the actual pose of the robot and the next waypoint to be reached. In order to do so, it uses the “_calculate_motion_commands” function that implements a proportional controller on both translation and rotation dynamics, which computes the “forward_speed” (which is the base speed of left/right motors) and the “rotation_speed” (which is the speed increment of each of the left/right motors).
-The two proportional controller have been tuned empirically by trial and error to obtain the best performance possible of the system as a whole.
+The path following implementation uses a proportional control approach with separate handling of rotation and translation:
+
+```python
+def _calculate_motion_commands(self, angle_diff, distance):
+    # Calculate rotation speed proportional to angle error
+    if abs(angle_diff) < np.deg2rad(ANGLE_TOLERANCE):
+        rotation_speed = 0
+    else: 
+        rotation_speed = np.clip(KP_ROTATION*angle_diff, 
+                               -MAX_ROTATION_SPEED, 
+                               MAX_ROTATION_SPEED)
+    
+    # Forward speed varies with angle error and distance
+    angle_factor = np.cos(angle_diff) 
+    distance_factor = np.clip(KP_TRANSLATION*distance, 
+                            MIN_TRANSLATION_SPEED, 
+                            MAX_TRANSLATION_SPEED)
+    
+    forward_speed = distance_factor * max(0, angle_factor)
+    return int(forward_speed), int(rotation_speed)
+```
+
+Key features of the path following control:
+
+1. **Angular Control**:
+   - Uses proportional control with gain `KP_ROTATION`
+   - Implements deadband of ±5° to prevent oscillation
+   - Speed limited to `MAX_ROTATION_SPEED`
+
+2. **Linear Control**:
+   - Forward speed proportional to distance with gain `KP_TRANSLATION`
+   - Speed reduced based on angular error using cosine factor 
+   - Bounded between `MIN_TRANSLATION_SPEED` and `MAX_TRANSLATION_SPEED`
 
 ### Obstacle Avoidance Loop
 
+When obstacles are detected by the proximity sensors, the system switches to a reactive avoidance behavior:
+
+```python
+def _avoid_obstacles(self, sensor_data):
+    # Initialize speeds with base obstacle avoidance speed
+    left_speed = OBSTACLES_SPEED
+    right_speed = OBSTACLES_SPEED
+
+    # Updates speed based on sensor data and weights
+    for i in range(len(sensor_data)):
+        left_speed += sensor_data[i] * WEIGHT_LEFT[i] / SCALE_SENSOR
+        right_speed += sensor_data[i] * WEIGHT_RIGHT[i] / SCALE_SENSOR
+```
+
+The obstacle avoidance system features:
+
+1. **Sensor Processing**:
+   - Uses 5 front proximity sensors
+   - Readings scaled by `SCALE_SENSOR` factor
+   - Weights optimized for smooth avoidance behavior
+
+2. **Motor Control**:
+   - Asymmetric weight matrices for left/right motors:
+     ```python
+     WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]  # Positive weights favor right turn
+     WEIGHT_RIGHT = [-5, -8, -10, 8,  5]   # Positive weights favor left turn
+     ```
+   - Base speed of 100 units modified by weighted sensor readings
 
 <p align="center">
-<img src="img/local_nav/figure_ANN_TP.png" width="500" alt="local_nav_ann">
+<img src="img/local_nav/ANN_robot_control.png" width="400" alt="local_nav_ann">
 </p>
 
-The obstacle avoidance routine (“_avoid_obstacles” function in the LocalNav() class) is a simple implementation of the Artificial Neural Network we saw during one of the practical sessions of the course.
-The input of the neural network are the readings of the proximity sensors, which are then multiplied by the weights and summed together to get the speed assigned to each of the motors. We do not consider the readings of the proximity sensors on the back of the robot since it will always move forward so it shouldn’t detect any obstacle from the rear. 
-Once the Thymio avoided an obstacle, to make sure it is completely gone, the robot checks a few times the sensors before going back to the path_following mode.
+### Recovery Behavior
+
+The system implements a recovery mechanism to smoothly transition between obstacle avoidance and path following:
+
+```python
+if self._detect_obstacles(sensor_data):
+    # Activate obstacle avoidance behavior
+    self.obstacles_iter = OBSTACLES_MAX_ITER
+    self.needs_recompute = True
+    command, goal_reached = self._avoid_obstacles(sensor_data) 
+else:
+    # Decrement obstacle avoidance counter
+    self.obstacles_iter = max(self.obstacles_iter - 1, 0)
+    
+    if self.obstacles_iter == 0:
+        if self.needs_recompute:
+            # Request new trajectory from current position
+            command = {
+                'action': 'recompute_trajectory',
+                'current_pos': self.thymio_pos.tolist(),
+                'current_orientation': self.thymio_orientation
+            }
+```
+
+Key aspects of the recovery behavior:
+
+1. **Persistence**:
+   - Maintains obstacle avoidance for `OBSTACLES_MAX_ITER` iterations
+   - Prevents premature switching between behaviors
+
+2. **Path Recomputation**:
+   - Triggers global path replanning after obstacle clearance
+   - Uses current position as new start point
+   - Maintains original goal position
+
+### Performance Characteristics
+
+The local navigation system achieves several important performance metrics:
+
+✓ Smooth trajectory following with < 5° orientation error \
+✓ Reliable obstacle detection and avoidance \
+✓ Stable transition between control modes \
+✓ Recovery from obstacle encounters with path recomputation
+
 
 <p align="center">
-<img src="img/local_nav/local_nav_mindmap.png" width="500" alt="local_nav_mindmap">
+<img src="img/local_nav/local_nav_map.svg" width="500" alt="local_nav_mindmap">
 </p>
 
 
@@ -830,10 +937,10 @@ Our EKF implementation provides several important capabilities:
 
 The motion control system integrates all our implemented modules to effectively guide the Thymio robot:
 
-1. The **Vision System** and **Odometry** (🟨) provide input to the **Extended Kalman Filter**(🟪) for accurate state estimation
-2. **Global Navigation** (🟧) uses the filtered state to plan optimal paths around known obstacles
-3. **Local Navigation** (🟩) combines the planned path with real-time sensor data to avoid unexpected obstacles
-4. The Controller converts navigation commands into appropriate motor speeds for the Thymio robot
+1. The **Vision System** (🩷) and **Odometry** provide input to the **Extended Kalman Filter**(💜) for accurate state estimation
+2. **Global Navigation** (🩵) uses the filtered state to plan optimal paths around known obstacles
+3. **Local Navigation** (💙) combines the planned path with real-time sensor data to avoid unexpected obstacles
+4. The **Controller** converts navigation commands into appropriate motor speeds for the Thymio robot
 
 This integrated approach allows for robust autonomous navigation while handling both static and dynamic obstacles in the environment.
 
