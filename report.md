@@ -445,9 +445,6 @@ for obstacle in obstacles:
 graph = vg.VisGraph()
 graph.build(polygon_obstacles, status=False)
 ```
-        graph = vg.VisGraph()
-        graph.build(polygon_obstacles, status=False)
-
 PyVisGraph's `build()` function constructs a visibility graph from collections of polygonal obstacles. Each obstacle is defined by an array of vertex coordinates describing its geometric shape. The resulting graph represents all possible direct paths between vertices that don't intersect with obstacles, creating a network of navigable routes.
 
 ### Path Planning 
