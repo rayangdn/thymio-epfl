@@ -497,7 +497,7 @@ The complete implementation pipeline is detailed below:
 
 - Implement custom visibility graph that enforces map boundaries, preventing invalid paths when obstacles are near map edges. Current PyVisGraph treats out-of-bounds obstacles as nonexistent, leading to incorrect path generation through obstacles.
 
-- Replace current O(n²log n) visibility graph implementation with more efficient alternatives for dense/complex environments: RRTs (O(nlog n)), potential fields (O(n)), or grid-based methods (O(nlog n)). Each offers different trade-offs between computational efficiency and path quality.
+- Replace current O(n²log n) visibility graph implementation with more efficient alternatives for dense/complex environments: [RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378) (O(nlog n)), [potential fields](https://medium.com/@rymshasiddiqui/path-planning-using-potential-field-algorithm-a30ad12bdb08) (O(mn)), or [grid-based methods](https://www.sciencedirect.com/science/article/pii/S1474667016327410) (O(nlog n)). Each offers different trade-offs between computational efficiency and path quality.
 
 - Add dynamic obstacle handling to update paths based on newly detected obstacles from vision system, making the planner more robust for real-time navigation in changing environments.
 
@@ -577,7 +577,7 @@ The obstacle avoidance system features:
 2. **Motor Control**:
    - Asymmetric weight matrices for left/right motors:
      ```python
-     WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]  # Positive weights favor right turn
+     WEIGHT_LEFT = [ 5,  8, -12,  -8, -5]  # Positive weights favor right turn
      WEIGHT_RIGHT = [-5, -8, -10, 8,  5]   # Positive weights favor left turn
      ```
    - Base speed of 100 units modified by weighted sensor readings
@@ -632,7 +632,6 @@ The local navigation system achieves several important performance metrics:
 ✓ Reliable obstacle detection and avoidance \
 ✓ Recovery from obstacle encounters with path recomputation
 
-
 <p align="center">
 <img src="img/local_nav/local_nav_map.svg" width="700" alt="local_nav_mindmap">
 </p>
@@ -641,13 +640,15 @@ The local navigation system achieves several important performance metrics:
 
 - Current P controller is adequate for predictable surfaces, but implementing PID control would improve robustness on challenging terrains (slippery/rough) by providing more precise movement and pose estimation through integral and derivative terms.
 
+- Implementing 3D static obstacle detection would prevent the robot from crossing over static obstacles and avoid infinite loops when local obstacles are near waypoints.
+
 - Upgrading from infrared to time-of-flight (TOF) sensors would enable earlier obstacle detection, allowing more proactive path corrections and smoother navigation.
 
 ## Filtering
 
-The localization system implements an Extended Kalman Filter (EKF) to fuse measurements from multiple sensors and provide robust state estimation. The EKF combines wheel odometry data with camera-based position measurements to maintain accurate tracking of the robot's pose and velocities, even when visual measurements are temporarily unavailable.
+The localization system implements an Extended Kalman Filter (EKF) to use measurements from multiple sensors and provide robust state estimation. The EKF combines wheel odometry data with camera-based position measurements to maintain accurate tracking of the robot's pose and velocities, even when visual measurements are temporarily unavailable.
 
-We chose the Extended Kalman Filter (EKF) for its balance of robustness and efficiency. While the standard Kalman Filter cannot handle our robot's nonlinear orientation dynamics, the EKF provides suitable nonlinear state estimation with lower computational cost than alternatives like [Particle Filters](https://en.wikipedia.org/wiki/Particle_filter). Our implementation was inspired by Automatic Addison's [Extended Kalman Filter tutorial](https://automaticaddison.com/extended-kalman-filter-ekf-with-python-code-example/).
+We chose the EKF for its balance of robustness and efficiency. While the standard Kalman Filter cannot handle our robot's nonlinear orientation dynamics, the EKF provides suitable nonlinear state estimation. Our implementation was inspired by Automatic Addison's [Extended Kalman Filter tutorial](https://automaticaddison.com/extended-kalman-filter-ekf-with-python-code-example/).
 
 
 ### Extended Kalman Filter Model
@@ -665,8 +666,7 @@ $$x_k = f(x_{k-1}, u_{k-1}) + w_{k-1}, \quad w_{k-1} \sim \mathcal{N}(0, Q_k)$$
 where:
 - $x_k$ is the state vector at time k
 - $u_{k-1}$ represents control inputs (motor commands)
-- $w_{k-1}$ is process noise modeling system uncertainties
-- $Q_k$ is the process noise covariance matrix representing uncertainty in state transitions
+- $w_{k-1}$ is the process noise with covariance $Q_k$
 - $f$ is the nonlinear state transition function
 
 #### Motion Model
@@ -684,32 +684,14 @@ where $\Delta t$ represents the time step between updates.
 
 #### Prediction Step
 
-The prediction step uses the differential drive model to estimate the robot's next state. The wheel velocities serve as control inputs:
+The prediction step uses the differential drive model to compute the robot's next state by first converting wheel velocities to linear and angular velocities with `compute_velocity()` function, which are then used as control inputs to update the robot's position and orientation.
 
 State Prediction:
 $$x_k = f(x_{k-1}, u_{k-1})$$
 Covariance Prediction:
 $$P_k = F_k P_{k-1} F_k^T + Q_k$$
 
-```python
-def predict(self, u):
-    # Extract current state
-    x, y, theta, _, _ = self.state
-    v_l, v_r = u
-    
-    # Compute robot velocities from wheel speeds
-    v = (v_l + v_r) / 2  # Linear velocity
-    omega = (v_l - v_r) / self.wheel_base  # Angular velocity
-    
-    # Predict next state using nonlinear motion model
-    x_next = x + v * np.cos(theta) * self.dt
-    y_next = y + v * np.sin(theta) * self.dt
-    theta_next = theta + omega * self.dt
-    v_next = v
-    omega_next = omega
-```
-
-The Jacobian of the motion model is computed for covariance propagation:
+The Jacobian F of the motion model is computed for covariance propagation:
 
 $$
 F = \begin{bmatrix} 
@@ -719,38 +701,42 @@ F = \begin{bmatrix}
 0 & 0 & 0 & 1 & 0 \\
 0 & 0 & 0 & 0 & 1
 \end{bmatrix}
+
 $$
+```python
+    def predict(self, u):
+      
+        # Extract current state
+        x, y, theta, _, _ = self.state
+        v_l, v_r = u
+        
+        # Compute robot velocities from wheel speeds
+        v, omega = self._compute_velocity(v_l, v_r)
+        
+        # Predict next state using nonlinear motion model
+        x_next = x + v * np.cos(theta) * self.dt
+        y_next = y + v * np.sin(theta) * self.dt
+        theta_next = theta + omega * self.dt
+        v_next = v
+        omega_next = omega
+        
+        self.state = np.array([x_next, y_next, theta_next, v_next, omega_next])
+        
+        # Compute Jacobian of motion model
+        F = np.eye(self.n)
+        F[0, 2] = -v * np.sin(theta) * self.dt  # ∂x/∂θ
+        F[0, 3] = np.cos(theta) * self.dt       # ∂x/∂v
+        F[1, 2] = v * np.cos(theta) * self.dt   # ∂y/∂θ
+        F[1, 3] = np.sin(theta) * self.dt       # ∂y/∂v
+        F[2, 4] = self.dt                       # ∂θ/∂ω
+        
+        # Update state covariance
+        self.P = F @ self.P @ F.T + self.Q
+```
 
 #### Update Step
 
-While our system uses an Extended Kalman Filter due to the nonlinear motion model in the prediction step, our measurement model is actually linear. This is because our vision system and wheel encoders directly observe the state variables without any nonlinear transformations:
-
-```python
-def update(self, measurement):
-    # Convert wheel velocities to robot velocities
-    measurement[3], measurement[4] = self._compute_velocity(measurement[3], measurement[4])
-    
-    # Linear measurement model - direct observation of states
-    H = np.eye(self.n)  # Identity matrix because measurements directly correspond to states
-    
-    # Compute Kalman gain and update state
-    S = H @ self.P @ H.T + self.R
-    K = self.P @ H.T @ np.linalg.inv(S)
-    
-    # Calculate measurement residual
-    y = measurement - self.state
-    
-    # Normalize angle difference to [-π, π]
-    y[2] = np.arctan2(np.sin(y[2]), np.cos(y[2]))
-
-    # Update state estimate and covariance
-    self.state = self.state + K @ y
-    self.P = (np.eye(self.n) - K @ H) @ self.P
-```
-
-Our measurement model is linear because:
-1. The vision system directly measures position and orientation (x, y, θ)
-2. The wheel encoders, after conversion via `_compute_velocity()`, directly provide robot velocities (v, ω)
+As we have seen, the prediction step involves a nonlinear motion model. However, the measurement model remains linear since our sensors provide direct state measurements - the vision system measures position and orientation (x, y, θ), while the wheel encoders measure linear and angular velocities (v, ω) after converting from wheel velocities.
 
 Therefore, our measurement equation simplifies to:
 $$z_k = Hx_k + v_k, \quad v_k \sim \mathcal{N}(0, R_k)$$
@@ -775,139 +761,8 @@ The update equations are:
    $$x_{k|k} = x_{k|k-1} + K_ky_k$$
    $$P_{k|k} = (I - K_kH)P_{k|k-1}$$
 
-This is a special case of the EKF where:
-- The prediction step requires linearization due to nonlinear motion dynamics
-- The update step simplifies to standard Kalman filter equations due to linear measurements
-
-
-This hybrid approach maintains the EKF's ability to handle nonlinear motion while benefiting from the computational simplicity of linear measurements.
-
-#### Noise Covariance Matrices
-
-The filter's performance is tuned through two key noise covariance matrices:
-
-1. **Process Noise (Q)**: Models uncertainty in the motion model:
-   ```python
-   Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
-   ```
-   The larger values for position states reflect greater uncertainty in motion prediction.
-
-2. **Measurement Noise (R)**: Adapts based on camera visibility:
-   ```python
-   # Camera visible - normal measurement uncertainty
-   R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 
-                         35.8960, 154.1675])
-   
-   # Camera occluded - high position/orientation uncertainty
-   R_COVERED = np.diag([9999999, 9999999, 9999999, 
-                       35.8960, 154.1675])
-   ```
-   
-   When the camera is occluded, the measurement noise for position and orientation increases significantly, causing the filter to rely more heavily on wheel odometry.
-
-### Key Features
-
-Our EKF implementation provides several important capabilities:
-
-✓ Fusion of visual and odometric measurements \
-✓ Robust state estimation  \
-✓ Smooth trajectory estimation for control
-
-
-
-
-This specific choice of the state vector allows us to simplify to the maximum extent possible our observation model, since are our measurements correspond exactly to the state vector. This choice is intuitive and easy-to-use for navigation and motion control. The trade-off is that we must convert between wheel velocities ($$v_{left}$$ and $$v_{right}$$) and robot velocities ($$v$$ and $$\omega$$).
-
-We assume a system described by a nonlinear model. This nonlinear state transition function $$f$$ is: 
-
-      
-
-#### Prediction Step
-The prediction step uses the differential drive model to estimate the robot's next state. The wheel velocities serve as control inputs. 
-We predict the state at time $$k$$:
-
-$$ \begin{align*}
-x_k = f(x_{k-1}, u_{k-1})
-\end{align*}$$
-
-
-$$ \begin{align*}
-P_k = F_k P_{k-1} F_k^T + Q_k
-\end{align*}$$
-
-and compute the predicted covariance $$P_k$$ of the state estimate. 
-
-This Prediction step is done in the `predict()` function. 
-
 ```python
-def predict(self, u):
-    # Extract current state
-    x, y, theta, _, _ = self.state
-    v_l, v_r = u
-    
-    # Compute robot velocities from wheel speeds
-    v = (v_l + v_r) / 2  # Linear velocity
-    omega = (v_l - v_r) / self.wheel_base  # Angular velocity
-    
-    # Predict next state using nonlinear motion model
-    x_next = x + v * np.cos(theta) * self.dt
-    y_next = y + v * np.sin(theta) * self.dt
-    theta_next = theta + omega * self.dt
-    v_next = v
-    omega_next = omega
-
-    self.state = np.array([x_next, y_next, theta_next, v_next, omega_next])
-        
-    # Compute Jacobian of state transition
-    F = np.eye(self.n)
-    F[0, 2] = -v * np.sin(theta) * self.dt
-    F[0, 3] = np.cos(theta) * self.dt
-    F[1, 2] = v * np.cos(theta) * self.dt
-    F[1, 3] = np.sin(theta) * self.dt
-    F[2, 4] = self.dt
-    
-    # Update covariance
-    self.P = F @ self.P @ F.T + self.Q
-```
-
-#### Update Step
-While our system uses an Extended Kalman Filter due to the nonlinear motion model in the prediction step, our measurement model is actually linear. This is because our vision system and wheel encoders directly observe the state variables without any nonlinear transformations:
-
-Our measurement model is linear because:
-1. The vision system directly measures position and orientation (x, y, θ)
-2. The wheel encoders, after conversion via `_compute_velocity()`, directly provide robot velocities (v, ω)
-
-Therefore, our measurement equation simplifies to:
-$$z_k = Hx_k + v_k, \quad v_k \sim \mathcal{N}(0, R_k)$$
-where:
-- $H = I$ 
-- $z_k = [x, y, \theta, v, \omega]^T$ (direct measurements)
-- $x_k = [x, y, \theta, v, \omega]^T$ (state vector)
-- $v_k$ is the measurement noise, assumed to be zero mean and with covariance $R_k$
-  
-The update equations are:
-
-1. **Innovation (Measurement Residual)**:
-   $$y_k = z_k - Hx_{k|k-1}$$
-
-2. **Innovation Covariance**:
-   $$S_k = HP_{k|k-1}H^T + R_k$$
-
-3. **Kalman Gain**:
-   $$K_k = P_{k|k-1}H^TS_k^{-1}$$
-
-4. **State Update**:
-   $$x_{k|k} = x_{k|k-1} + K_ky_k$$
-   $$P_{k|k} = (I - K_kH)P_{k|k-1}$$
-
-This is a special case of the EKF where:
-- The prediction step requires linearization due to nonlinear motion dynamics
-- The update step simplifies to standard Kalman filter equations due to linear measurements
-
-This hybrid approach maintains the EKF's ability to handle nonlinear motion while benefiting from the computational simplicity of linear measurements.
-
-We implement this in the `update()` function:
-```python
+def update(self, measurement):
     # Convert wheel velocities to robot velocities
     measurement[3], measurement[4] = self._compute_velocity(measurement[3], measurement[4])
     
@@ -929,84 +784,81 @@ We implement this in the `update()` function:
     self.P = (np.eye(self.n) - K @ H) @ self.P
 ```
 
-#### Noise Covariance Matrices
-The filter's performance is tuned through two key noise covariance matrices: the process noise covariance $$Q$$ and measurement noise covariance $$R$$ matrices. Both the process and observation noises are assumed to be zero mean multivariate Gaussian noises.
-We have performed experiments in the aim of obtaining these values.
-Such set-up and results are found in the run_test.ipynb notebook. 
+This is a special case of the EKF where:
+- The prediction step requires linearization due to nonlinear motion dynamics
+- The update step simplifies to standard Kalman filter equations due to linear measurements
 
-In this notebook, we first perform a speed conversion test, which allows us to determine the value of SPEED_TO_MM_S = 2.9466 (?? CHANGE)
+This hybrid approach maintains the EKF's ability to handle nonlinear motion while benefiting from the computational simplicity of linear measurements.
 
-##### Camera Noise Covariance Test 
-To represent the measurement error on $$(x,y,\theta)$$. For this task, we collect a sample of 500 camera photographs of a given map configuration, obstacle selection and robot position. Using our Vision module to obtain the Thymio position and orientation from such a frame, we then compute the Camera Measurement Covariance on $$(x,y,\theta)$$.
+### Noise Covariance Matrices
 
-##### Odometry Noise Covariance Test
-The odometry measurement noise on the linear velocity $$v$$  is established by performing 5 trials at 6 selected target values of the speed. The targed_speeds are communicated to the Thymio as a control input `set_motor_speed(target_v, target_v)`, having the left and right velocity equal to the target velocity. Finally, we collect the Thymio's odometry values with: `get_motor_speed()`. We therefore obtain the error distribution on $$v$$ at different target speeds. 
-A similar approach is followed to compute the measurement noise on the angular velocity $$\omega$$. This also forms part of the odometry measurement error. 
+The filter is tuned using two noise covariance matrices: the process noise covariance $Q$ and measurement noise covariance $R$. Both noises are modeled as zero-mean multivariate Gaussian distributions, with their values determined through experimental testing documented in the [run_tests notebook](tests/run_tests.ipynb).
 
-**Measurement Noise (R)**: Adapts based on camera visibility:
+#### Speed Conversion
+We obtained the `SPEED_TO_MM_S` conversion factor by counting wheel rotations at different speed settings between 100 and 200, averaging these measurements to find the relationship between commanded speed and actual velocity in mm/s. This initial value was then fine-tuned through testing to achieve accurate robot motion.
+
+#### Camera Noise Covariance 
+We determined the measurement noise covariance (x, y, θ) of the vision system by capturing 500 images of a stationary robot in a fixed map configuration. Using our [vision module](#computer-vision) to process each frame, we calculated the variance in the detected position and orientation measurements to obtain the camera measurement covariance matrix.
+
+#### Odometry Noise Covariance
+
+**Linear Velocity Noise**
+The odometry measurement noise for linear velocity (v) was determined through experimental trials using various target speeds (100-200). The noise was measured by commanding equal speeds to both wheels and recording the actual velocities from odometry readings.
+
+<p align="center">
+<img src="img/filtering/covariance/process_variance_linear_speed.png" width="700" alt="linear_speed_nois">
+</p>
+
+**Angular Velocity Noise** 
+The angular velocity (ω) noise was characterized through pure rotation tests, setting opposite but equal speeds to the wheels (using target speeds between 100-200).
+
+<p align="center">
+<img src="img/filtering/covariance/process_variance_angular_speed.png" width="700" alt="angular_speed_nois">
+</p>
+
+**Process Noise Covariance**  
+Since camera measurements showed very low noise, we used them as ground truth for process noise characterization.
+
+**Position and Linear Velocity Covariance (x, y, v)**  
+For different target speeds (100-200), we commanded straight-line motion and compared the robot's actual position (from camera) with expected position (from motion model) over time. The difference between these measurements allowed us to compute the process noise covariance for position and linear velocity.
+
+<p align="center">
+<img src="img/filtering/covariance/process_variance_all_translation.png" width="700" alt="translation_all">
+</p>
+
+**Orientation and Angular Velocity Covariance (θ, ω)**  
+Similarly, we tested rotational motion through pure rotation tests at various speeds (100-200), comparing actual orientation (from camera) with expected orientation (from motion model) to determine the process noise covariance for orientation and angular velocity.
+
+<p align="center">
+<img src="img/filtering/covariance/process_variance_all_rotation.png" width="700" alt="angular_all">
+</p>
+
+#### Covariance Matrices Results
+
+1. **Measurement Noise ($R$)**: Adapts based on camera visibility:
    ```python
    # Camera visible - normal measurement uncertainty
-   R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 
-                         35.8960, 154.1675])
-   
-   # Camera occluded - high position/orientation uncertainty
-   R_COVERED = np.diag([9999999, 9999999, 9999999, 
-                       35.8960, 154.1675])
+   R_UNCOVERED = np.diag([0.21232803, 0.21232803, 0.00001523, 32.1189, 122.2820])
+
+   # Camera hided - high position/orientation uncertainty
+   R_COVERED = np.diag([9999999, 9999999, 9999999, 32.1189, 122.2820]) 
    ```
- 
-
-Due to the fact that the camera vision can be covered, we define two different measurement noise covariance matrices $$R$$, more precisely $$R_{covered}$$ and $$R_{uncovered}$$. When the camera is covered, and therefore camera measurements aren't available, the measurement noise covariance for position and orientation increases significantly, causing the filter to rely more heavily on wheel odometry. This effectively tells the Kalman filter to ignore any position/orientation measurements during these periods and rely solely on the motion model prediction and odometry measurements. This is a common technique in Kalman filtering when certain sensors become temporarily unavailable - setting their corresponding measurement uncertainties to very high values effectively disables their influence on the state estimate.
-
-There is a method in the extended_kalman_filter.py file to detect this covering of the camera and set the measurement noise covariance matrix to the corresponding value:
-
-```python
-def set_mode(self, covered):
-        if covered:
-            self.R = R_COVERED # No measurement from camera
-        else:
-            self.R = R_UNCOVERED # Measurement from camera
-  ```
-<p align="center">
-<img src="img/filtering/covariance/process_variance_linear_speed.png" width="700" alt="odometry error v">
-</p>
-<p align="center">
-<em>Odometry Noise Covariance for linear velocity v</em>
-</p>
-
-<p align="center">
-<img src="img/filtering/covariance/process_variance_angular_speed.png" width="700" alt="odometry error w">
-</p>
-<p align="center">
-<em>Odometry Noise Covariance for angular velocity w</em>
-</p>
-
-##### Process Noise Covariance Test
-For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position $$(x, y)$$ and linear velocity $$v$$, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. 
-
-The $$(x,y,v)$$ process noise covariance test is done in the following manner. We have a selection of target speeds, and for each value we do 5 trials. At each target speed, we set the motor speed to that target, let the robot move for a certain time duration, collect the actual_position of the robot at different timestamps through the camera vision, and analytically compute the expected_position of the robot at different timestamps using the state transition model detailed previously. With these two values, we can compute the process variance on $$(x,y,v)$$. 
-Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
-            
- **Process Noise (Q)**: Models uncertainty in the motion model:
+   The system adapts to camera visibility using two different measurement noise covariance matrices: $R_{covered}$ and $R_{uncovered}$. When the camera view is hided, the filter automatically switches to $R_{covered}$, which has significantly higher position and orientation uncertainties. This causes the filter to rely primarily on wheel odometry and motion model predictions until camera vision is restored. 
    ```python
-   Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
+    def set_mode(self, covered):
+        # Switch measurement noise based on camera visibility
+        self.R = R_COVERED if covered else R_UNCOVERED
+   ```
+
+2. **Process Noise ($Q$)**: Models uncertainty in the motion model:
+   ```python
+   Q = np.diag([27.7276, 27.7276, 0.0554, 0.1026, 0.01])
    ```
    The larger values for position states reflect greater uncertainty in motion prediction.
-
-  <p align="center">
-  <img src="img/filtering/covariance/process_variance_all_rotation.png" width="700" alt="process noise angular">
-  </p><br>
-  <em>Process noise for position (x,y) and linear velocity v</em>
-  </p>
-  
-  <p align="center">
-  <img src="img/filtering/covariance/process_variance_all_translation.png" width="700" alt="process noise linear">
-  </p>
-  <p align="center">
-  <em>Process noise for orientation theta and angular velocity w </em>
-  </p>
-  
    
-#### Key Features
+
+
+### Key Features
 
 Our EKF implementation provides several important capabilities:
 
@@ -1015,15 +867,17 @@ Our EKF implementation provides several important capabilities:
 ✓ Smooth trajectory estimation for control
 
 #### Future Improvements
-- EKF works well with motion models with mild non-linearities (as in our case), and uncertainties are roughly Gaussian with zero mean. It can fail when systems are highly non-linear or have multi-modal distributions. In such cases, a [Particle Filter](https://en.wikipedia.org/wiki/Particle_filter) assumes the state-space model can be nonlinear and the initial state and noise distributions can take any form required. This allows it to better handle multi-modal distributions and severe non-linearities.
-- Implement adaptive noise covariance matrices (Q and R). Dynamically adjust process and measurement noise based on robot's speed, as higher speeds may need larger process noise
-- Add acceleration states to improve motion prediction
-- To improve our robustness, we may implement outlier detection by implement Chi-square testing for measurement validation, developing adaptive thresholds for measurement acceptance, and including measurement history analysis for anomaly detection.
+
+- EKF works well with our mildly non-linear motion model, but a [Particle Filter](https://www.sciencedirect.com/topics/computer-science/particle-filter#:~:text=Particle%20Filter%20(PF)%20is%20a,density%20probability%20of%20a%20system.) could better handle highly non-linear systems and non-Gaussian distributions
+
+- Process ($Q$) and measurement ($R$) noise covariances could dynamically adjust based on robot speed, as faster motion typically requires larger process noise
+
+- Adding acceleration states would improve motion prediction accuracy
+
+- Measurement validation could be improve through [Chi-square testing](https://en.wikipedia.org/wiki/Chi-squared_test) and historical measurement analysis for outlier detection
 
 ## Motion Control
 
-
-This navigation algorithm is computationally efficient enough to enable real-time computation, allowing for immediate path recalculation in scenarios like local avoidance or kidnapping. Outside of these special cases, the path is calculated only once at the begining. 
 The motion control system integrates all our implemented modules to effectively guide the Thymio robot:
 
 1. The **Vision System** (🩷) and **Odometry** provide input to the **Extended Kalman Filter**(💜) for accurate state estimation
@@ -1039,3 +893,4 @@ This integrated approach allows for robust autonomous navigation while handling 
 
 ## Conclusion
 
+This project successfully developed an autonomous navigation system for the Thymio robot by integrating [computer vision](#computer-vision), [path planning](#global-navigation), and [state estimation](#filtering). The system combines global path planning using visibility graphs with reactive [local navigation](#local-navigation) to handle both static and dynamic obstacles. A robust EKF uses camera and odometry measurements to maintain accurate position tracking, even when visual feedback is temporarily unavailable. The implementation demonstrates reliable autonomous navigation in a controlled environment.

@@ -39,8 +39,6 @@ class ExtendedKalmanFilter:
     
     def initialize_state(self, state):
         # Set initial state estimate
-        if len(state) != self.n:
-            raise ValueError(f"State vector must have length {self.n}")
         self.state = state
         
     def set_mode(self, covered):
@@ -48,10 +46,7 @@ class ExtendedKalmanFilter:
         self.R = R_COVERED if covered else R_UNCOVERED
             
     def predict(self, u):
-        # Validate control input dimension
-        if len(u) != self.m:
-            raise ValueError(f"Control input must have length {self.m}")
-        
+
         # Extract current state
         x, y, theta, _, _ = self.state
         v_l, v_r = u
@@ -80,6 +75,7 @@ class ExtendedKalmanFilter:
         self.P = F @ self.P @ F.T + self.Q
 
     def update(self, measurement):
+        
         # Convert wheel velocities to robot velocities
         measurement[3], measurement[4] = self._compute_velocity(measurement[3], measurement[4])
         
