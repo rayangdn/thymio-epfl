@@ -371,7 +371,6 @@ The current vision system could be improve to handle more realistic scenarios by
 
 * Replacing binary color detection (black/white) with object detection ML models like [YOLOv8](https://yolov8.com/) to support varied colors, more complex shapes and textures
 * Removing ArUco marker dependency by implementing [Visual SLAM](https://cvg.cit.tum.de/research/vslam)
-* Adding support for dynamic obstacles by implementing real-time tracking and trajectory prediction
 
 
 ## Global navigation
@@ -380,18 +379,22 @@ Furthermore, optimality can be defined with respect to different criteria, such 
 
 This function is fulfilled by the Global Navigation module. The full code is found in the global_navigation.py file.
 
-We possess a model of the environment, with some initial "fixed/permanent" obstacles. These obstacles are assumed to be permanent for the duration of the trial. Nonetheless, this does not mean all obstacles are included, as some unexpected (unrecorded) physical obstacles can be put in the map in the robot's path at any point in time, and the Local Navigation module is reponsible for avoiding a collision and returning/recomputing a global path.
+The global navigation module employs a visibility graph approach for optimal path planning, enabling the Thymio robot to navigate efficiently around static obstacles. The implementation is based on the [PyVisGraph library](https://github.com/TaipanRex/pyvisgraph) which efficiently constructs visibility graphs from detected polygonal obstacles. This library was chosen for its ease of use. The module interfaces directly with our [vision based](#computer-vision) obstacle detection system to maintain an accurate environmental model.
+
 
 1. Image of map, with obstacles, start, end !!!
+
 
 The path planning process consists of three main components:
 1. Obstacle processing with safety margins
 2. Visibility graph construction
 3. Shortest path computation
 
+These components are integrated in the `get_trajectory()` function, which executes the complete planning pipeline.
+
 ### Obstacle Processing
 
-Before constructing the visibility graph, we extend all obstacles by a safety margin to ensure the robot maintains a safe distance during navigation:
+Before constructing the visibility graph, we use the `extend_obstacles()` function to extend all obstacles by a safety margin (find empirically), ensuring that the robot maintains a safe obstacles distance during navigation:
 
 ```python
 def _extend_obstacles(self, corners, thymio_width):
@@ -415,7 +418,7 @@ def _extend_obstacles(self, corners, thymio_width):
 The obstacle extension process:
 - Calculates the centroid of each obstacle
 - Extends each corner outward from the centroid
-- Adds a security margin plus half the robot's width
+- Adds `SECURITY_MARGIN` plus half the robot's width
 - Ensures safe clearance during navigation
 
 <p align="center">
@@ -433,7 +436,7 @@ In the ==compute_trajectory()== function, we use the ==build()== method of the P
 
 #### Visibility Graph Construction
 
-The visibility graph is constructed using the following steps:
+The visibility graph is constructed in the `compute_trajectory()` function using the following steps :
 
 1. **Point Conversion**: Convert robot position, goal position, and obstacle corners to visibility graph points:
 ```python
@@ -450,16 +453,18 @@ for obstacle in obstacles:
     polygon_obstacles.append(polygon)
 ```
 
-2. **Graph Building**: Create edges between mutually visible vertices:
+2. **Graph Building**: Create edges between visible vertices:
 ```python
 # Create visibility graph and find shortest path
 graph = vg.VisGraph()
 graph.build(polygon_obstacles, status=False)
 ```
+
 The way ==build()== creates the graph is by identifying all vertices (including start and goal positions), and then connecting pairs of vertices with edges if the straight line between them doesn't intersect any polygon obstacles.
-  
+ Once the visibility graph is constructed, we compute the shortest path using [Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) implementend in the PyVisGraph's `shortest_path()`function:
 ### Path Planning 
 After having created the visibility graph, we can employ the ==shortest_path()== method in the PyVisGraph class. This method uses the Dijkstra algorithm to compute the shortest path with a given start and goal position. This is done in the ==compute_trajectory()== function.
+
 
 ```python
 shortest_path = graph.shortest_path(start, end)
@@ -480,6 +485,7 @@ The path computation:
 <img src="img/global_nav/trajectory.png" width="500" alt="extended obstacles">
 </p>
 
+
 Finally, the ==get_trajectory()== function combines everything and handles the visualization.
 
 This navigation algorithm is computationally efficient enough to enable real-time computation, allowing for immediate path recalculation in scenarios like local avoidance or kidnapping.
@@ -492,11 +498,14 @@ Our global navigation implementation provides several important capabilities:
 ✓ Automatic safety margin calculation based on robot size \
 ✓ Path computation and visualization \
 ✓ Integration with vision system coordinates \
-✓ Support for arbitrary obstacle shapes and positions
+✓ Support for arbitrary polygon obstacle shapes and positions
+
+The complete implementation pipeline is detailed below:
 
 <p align="center">
 <img src="img/global_nav/global_nav_map.svg" width="700" alt="extended obstacles">
 </p>
+
 
 #### Considerations  
 - Our implementation of global navigation does not account for dynamic obstacles, as we intentionally avoid using camera vision to update obstacles when new ones are detected. This approach is designed to test and challenge the local navigation system, which is capable of reacting to unexpected and unknown obstacles. If the path becomes blocked, we handle recovery by recomputing a new global path, after performing local obstacle avoidance.
@@ -505,11 +514,11 @@ Our global navigation implementation provides several important capabilities:
 
 ((- Additionally, one may observe that the global paths outputted by the visibility graph algorithm are angular (visibility graphs naturally produce straight-line segments), not possessing any smoothness at all. This is done intentionally, in order to simplify the robot dynamics to the maximum extent possible, as implementing a gradually increasing angular velocity, or multiple reorientations, may exacerbate error, rather than doing a punctual re-orientation. (WE ONLY DO STRAIGHT LINES?? should always have w = 0, except at waypoints, Robot orientation at waypoints). Indeed, we are prioritizing geometric optimality over smooth paths. COMPARISON TO GRID-BASED MAPS??. This graph + algorithm allows us to construct a path that seeks to minimise the complexity of motion control, in a bid to minimise the magnification of motion control error. ))
 
-#### Potential Improvements
+#### Future Improvements
 - The Visibility Graph does not account for map boundaries. As a result, if an obstacle is close to the map's edge, the graph may generate a path that goes outside the map to reach the goal, even if there isn’t enough space for the robot to pass between the obstacle and the boundary. This occurs because the ==shortest_path()== computation imposes no constraints to ensure the path remains within the map's defined area. When attempting to enforce such constraints, we observed that the extended corner of an obstacle near the map boundary may fall outside the map. This causes the entire obstacle to be invalidated and treated as nonexistent, leading the graph to incorrectly assume there is no obstacle and to generate a path that crosses directly over it. This limitation in our implementation highlights an opportunity for improvement, as designing a custom visibility graph algorithm could better handle such edge cases.
   
 - The worst-case complexity for constructing the Visibility Graph is at least O(n^2), where n is the number of vertices (corners of obstacles, goal/start positions, etc.). This arises in scenarios where all vertices are mutually visible, requiring visibility checks for every pair of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles, where the number of vertices and potential edges can grow rapidly. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees (RRTs), Potential Fields, and Grid-based methods (e.g., A*, D*) offer more scalable solutions, each with trade-offs in efficiency and path quality.
-((- Alternative methods that address these challenges include: (1) Rapidly-exploring Random Trees (RRTs), which are particularly suited for dynamic environments and can quickly generate feasible paths; (2) Potential Fields, which are simpler but prone to issues like getting stuck in local minima; and (3) Grid-based methods (e.g., A*, D*), which are easier to implement and computationally efficient, though they may produce less smooth paths compared to Visibility Graphs. These alternatives can better balance computational complexity and adaptability in environments with a large number of obstacles.))
+((- Alternative methods that address these challenges include: (1) Rapidly-exploring Random Trees (RRTs), which are particularly suited for dynamic environments and can quickly generate feasible paths; (2) Potential Fields, which are simpler but prone to issues like getting stuck in local minima; and (3) Grid-based methods (e.g., A*, D*), which are easier to implement and computationally efficient, though they may produce less smooth paths compared to Visibility Graphs. These alternatives can better balance computational complexity and adaptability in environments with a large number of obstacles.))  
 
 ## Local Navigation
 
