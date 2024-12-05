@@ -7,35 +7,39 @@
 - [Team Members](#team-members)
   - [Role Distribution](#role-distribution)
 - [Introduction](#introduction)
+  - [Experimental Setup and Design Choices](#experimental-setup-and-design-choices)
   - [Project Demonstration](#project-demonstration)
 - [Computer Vision](#computer-vision)
   - [Calibration](#calibration)
-    - [Process](#process)
-    - [Calibration Parameters](#calibration-parameters)
   - [ArUco Marker Detection](#aruco-marker-detection)
-    - [Marker Configuration](#marker-configuration)
   - [Perspective Transform](#perspective-transform)
-    - [Computing the Transform Matrix](#computing-the-transform-matrix)
-    - [Applying the Transform](#applying-the-transform)
   - [Obstacle Detection](#obstacle-detection)
-    - [Processing Pipeline](#processing-pipeline)
-    - [Corner Filtering](#corner-filtering)
+  - [Key Features](#key-features)
+  - [Future Improvements](#future-improvements)
 - [Global Navigation](#global-navigation)
-  - [Obstacle processing](#obstacle-processing)
-  - [Visibility graph construction](#visibility-graph-construction)
-  - [Shortest path computation](#shortest-path-computation)
+  - [Path Planning Strategy](#path-planning-strategy)
+  - [Obstacle Processing](#obstacle-processing)
+  - [Visibility Graph Construction](#visibility-graph-construction)
+  - [Path Planning](#path-planning)
+  - [Key Features](#key-features-1)
+  - [Future Improvements](#future-improvements-1)
 - [Local Navigation](#local-navigation)
-  - [Local Navigation Introduction](#local-navigation-intro)
-  - [Control Loop](#control-loop)
+  - [Control Architecture](#control-architecture)
   - [Path Following Loop](#path-following-loop)
   - [Obstacle Avoidance Loop](#obstacle-avoidance-loop)
+  - [Recovery Behavior](#recovery-behavior)
+  - [Performance Characteristics](#performance-characteristics)
+  - [Future Improvements](#future-improvements-2)
 - [Filtering](#filtering)
-  - [Extended Kalman Filter Model](#extended-kalman-filter)
-    - [Prediction Step](#prediction-step)
-    - [Update Step](#update-step)
-    - [Noise Covariance Matrices](#noise-covariance-matrices)
+  - [Extended Kalman Filter Model](#extended-kalman-filter-model)
+  - [Prediction Step](#prediction-step)
+  - [Update Step](#update-step)
+  - [Noise Covariance Matrices](#noise-covariance-matrices)
+  - [Key Features](#key-features-2)
+  - [Future Improvements](#future-improvements-3)
 - [Motion Control](#motion-control)
 - [Conclusion](#conclusion)
+- [References](#references)
 
 ## Overview
 This project was developed as part of the **Basics of Mobile Robotics (MICRO-452)** course at EPFL, under the supervision of Professor Francesco Mondada from the [MOBOTS Laboratory](https://www.epfl.ch/labs/mobots/).
@@ -896,3 +900,29 @@ This integrated approach allows for robust autonomous navigation while handling 
 This project successfully developed an autonomous navigation system for the Thymio robot by integrating [computer vision](#computer-vision), [path planning](#global-navigation), and [state estimation](#filtering). The system combines global path planning using visibility graphs with reactive [local navigation](#local-navigation) to handle both static and dynamic obstacles. A robust EKF uses camera and odometry measurements to maintain accurate position tracking, even when visual feedback is temporarily unavailable. The implementation demonstrates reliable autonomous navigation in a controlled environment.
 
 Looking ahead, several key improvements could further enhance the system's capabilities. The vision system could be upgraded to use modern object detection models like YOLOv8 for handling diverse obstacle types, while implementing Visual SLAM would eliminate the need for ArUco markers. The global navigation module could benefit from more efficient path planning algorithms like RRTs or potential fields for complex environments, along with dynamic obstacle handling. The local navigation system could be enhanced with PID control for better performance on challenging surfaces, and upgrading to time-of-flight sensors would enable more proactive obstacle avoidance. Finally, the state estimation could be improved by implementing a particle filter for better handling of non-linear dynamics, along with dynamic noise covariance adjustment based on robot speed. These enhancements would make the system more robust and suitable for real-world applications beyond the controlled environment.
+
+# References
+I'll help add any missing references from the project document. Looking at the content, here's a comprehensive update to the References section that includes additional academic and technical resources mentioned:
+
+# References
+1. MOBOTS Laboratory. EPFL. Available at: https://www.epfl.thymio.org/
+2. OpenCV Documentation:
+   - Camera Calibration Guide: https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html
+   - ArUco Module: https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html
+   - Geometric Transformations: https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html
+   - Canny Edge Detection: https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html
+   - Contour Detection: https://docs.opencv.org/3.4/d4/d73/tutorial_py_contours_begin.html
+2. Computer Vision Technologies:
+   - YOLOv8: https://yolov8.com/
+   - Visual SLAM: https://cvg.cit.tum.de/research/vslam
+3. Path Planning and Navigation:
+   - PyVisGraph Library: https://github.com/TaipanRex/pyvisgraph
+   - Dijkstra's Algorithm: https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
+   - RRT Path Planning: https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378
+   - Potential Fields: https://medium.com/@rymshasiddiqui/path-planning-using-potential-field-algorithm-a30ad12bdb08
+   - Grid-based Methods: https://www.sciencedirect.com/science/article/pii/S1474667016327410
+4. State Estimation:
+   - Extended Kalman Filter Tutorial: https://automaticaddison.com/extended-kalman-filter-ekf-with-python-code-example/
+   - Particle Filters: https://www.sciencedirect.com/topics/computer-science/particle-filter
+   - Chi-square Testing: https://en.wikipedia.org/wiki/Chi-squared_test
+
