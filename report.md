@@ -123,7 +123,11 @@ Our experimental environment consists of a well-defined workspace measuring 120x
 
 Below is a demonstration of our autonomous navigation system in action:
 
-[Insert Video Here]
+<p align="center">
+  <video width="320" height="240" controls>
+    <source src="vids/output.mp4" type="video/mp4">
+  </video>
+</p>
 
 In this video, you can see:
 - The Thymio robot navigating through our test environment
