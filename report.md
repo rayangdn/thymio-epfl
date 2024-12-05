@@ -624,7 +624,7 @@ else:
 Key aspects of the recovery behavior:
 
 1. **Persistence**:
-   - Maintains obstacle avoidance for `OBSTACLES_MAX_ITER` iterations
+   - Maintains obstacle avoidance at least for `OBSTACLES_MAX_ITER` iterations
    - Prevents premature switching between behaviors
 
 2. **Path Recomputation**:
