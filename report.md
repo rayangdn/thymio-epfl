@@ -478,7 +478,7 @@ Our global navigation implementation provides several important capabilities:
 ✓ Automatic safety margin calculation based on robot size \
 ✓ Path computation and visualization \
 ✓ Integration with vision system coordinates \
-✓ Support for arbitrary obstacle shapes and positions
+✓ Support for arbitrary polygon obstacle shapes and positions
 
 The complete implementation pipeline is detailed below:
 
