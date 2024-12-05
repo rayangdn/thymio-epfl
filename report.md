@@ -381,7 +381,7 @@ While path optimality can be measured through various metrics including executio
 ### Path Planning Stategy
 
 The path planning process consists of three main components:
-1. Obstacle processing with `safety margins`
+1. Obstacle processing with safety margins
 2. Visibility graph construction
 3. Shortest path computation
 
@@ -389,7 +389,7 @@ These components are integrated in the `get_trajectory()` function, which execut
 
 ### Obstacle Processing
 
-Before constructing the visibility graph, we use the `extend_obstacles()` function to extend all obstacles by a `safety margin` (find empirically), ensuring that the robot maintains a safe obstacles distance during navigation:
+Before constructing the visibility graph, we use the `extend_obstacles()` function to extend all obstacles by a safety margin (find empirically), ensuring that the robot maintains a safe obstacles distance during navigation:
 
 ```python
 def _extend_obstacles(self, corners, thymio_width):
@@ -413,7 +413,7 @@ def _extend_obstacles(self, corners, thymio_width):
 The obstacle extension process:
 - Calculates the centroid of each obstacle
 - Extends each corner outward from the centroid
-- Adds a `security margin` plus half the robot's width
+- Adds `SECURITY_MARGIN` plus half the robot's width
 - Ensures safe clearance during navigation
 
 <p align="center">
