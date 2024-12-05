@@ -128,6 +128,8 @@ Our experimental environment consists of a well-defined workspace measuring 130x
 Below is a demonstration of our autonomous navigation system in action:
 
 <center><div><img src = "vids\demo.gif" width =1000></div></center>
+<p align="center"><em>Thymio robot navigating autonomously through static obstacles from start to goal position.</em></p>
+
 
 In this video, you can see:
 - The Thymio robot navigating through our environment
@@ -145,6 +147,8 @@ Camera calibration is a crucial step in our computer vision pipeline, as it help
 
 <p align="center">
 <img src="img/vision/calibration/checkerboard.png" width="700" alt="checkerboard">
+<br>
+<em>Checkerboard pattern used for camera calibration.</em>
 </p>
 
 #### Process
@@ -224,6 +228,8 @@ A perspective transform is implemented  to convert the camera's angled view into
 
 <p align="center">
 <img src="img/vision/aruco_markers/map.png" width="700" alt="map environment">
+<br>
+<em>Test environment with ArUco markers defining workspace and tracking positions.</em>
 </p>
 
 #### Computing the Transform Matrix
@@ -270,7 +276,9 @@ This transformation allows us to:
 - Simplify obstacle detection and path planning algorithms
 
 <p align="center">
-<img src="img/vision/obstacles/process.png" width="700" alt="local_nav_ann">
+<img src="img/vision/obstacles/process.png" width="700" alt="process_frame">
+<br>
+<em>Camera view and transformed view.</em>
 </p>
 
 ### Obstacle Detection
@@ -279,6 +287,8 @@ The obstacle detection system combines Canny edge detection and contour finding 
 
 <p align="center">
 <img src="img/vision/obstacles/environment.png" width="700" alt="obstacles">
+<br>
+<em>Test environment showing typical obstacle configurations.</em>
 </p>
 
 #### Processing Pipeline
@@ -307,7 +317,9 @@ edges_frame = cv2.Canny(threshold_frame, 50, 150)
 The parameters 50 and 150 represent the lower and upper thresholds for the hysteresis procedure in Canny edge detection.
 
 <p align="center">
-<img src="img/vision/obstacles/edges_detection.png" width="700" alt="egdes">
+<img src="img/vision/obstacles/edges_detection.png" width="700" alt="edges">
+<br>
+<em>Edge detection stages: grayscale, threshold, and Canny edge detection.</em>
 </p>
 
 **Contour Detection and Processing**:
@@ -330,11 +342,7 @@ for contour in contours:
 ```
 We use `cv2.RETR_EXTERNAL` to only retrieve the outer contours, and `cv2.CHAIN_APPROX_SIMPLE` to compress horizontal, vertical, and diagonal segments and leave only their end points. The `OBSTACLE_MIN_AREA` threshold helps filter out small noise contours.
 
-<p align="center">
-<img src="img/vision/obstacles/contours_detection.png" width="700" alt="contours">
-</p>
-
-#### Corner Filtering
+**Corner Filtering**
 
 To ensure accurate obstacle representation while minimizing computational complexity, we implement a corner filtering mechanism that removes redundant points:
 
@@ -360,8 +368,13 @@ This filtering process:
 - Adds subsequent corners only if they are at least `MIN_DISTANCE` pixels away from all previously kept corners
 - Helps create a more efficient representation of obstacles while maintaining their shape accuracy
 
-Finally, the detected obstacle corners are converted from pixel coordinates to millimeters using our perspective transform scale factor. This conversion is crucial for the navigation system as it needs real-world measurements to plan paths and avoid obstacles effectively.
+<p align="center">
+<img src="img/vision/obstacles/contours_detection.png" width="700" alt="contours">
+<br>
+<em>Contour detection: edges, detected contours, and filtered corners.</em>
+</p>
 
+Finally, the detected obstacle corners are converted from pixel coordinates to millimeters using our perspective transform scale factor. This conversion is crucial for the navigation system as it needs real-world measurements to plan paths and avoid obstacles effectively.
 
 ### Keys Features
 The combination of these processing steps creates a robust obstacle detection system that:
@@ -423,6 +436,8 @@ The obstacle extension process:
 
 <p align="center">
 <img src="img/global_nav/extended_obstacles.png" width="700" alt="extended obstacles">
+<br>
+<em>Original obstacles (red) and safety margins (blue).</em>
 </p>
 
 The `SECURITY_MARGIN` parameter ensures safe navigation by compensating for two key factors:
@@ -476,8 +491,10 @@ The path computation:
 - Calculates the total path length 
 - Returns a series of waypoints for the robot to follow
 
-<p align="center">
-<img src="img/global_nav/trajectory.png" width="700" alt="extended obstacles">
+p align="center">
+<img src="img/global_nav/trajectory.png" width="700" alt=" trajectory">
+<br>
+<em>Path planning showing obstacles, visibility graph, and shortest path.</em>
 </p>
 
 
@@ -494,7 +511,9 @@ Our global navigation implementation provides several important capabilities:
 The complete implementation pipeline is detailed below:
 
 <p align="center">
-<img src="img/global_nav/global_nav_map.svg" width="700" alt="extended obstacles">
+<img src="img/global_nav/global_nav_map.svg" width="700" alt="global_nav">
+<br>
+<em>Global navigation system architecture diagram.</em>
 </p>
 
 #### Future Improvements
@@ -587,10 +606,9 @@ The obstacle avoidance system features:
    - Base speed of 100 units modified by weighted sensor readings
 
 <p align="center">
-    <img src="img/local_nav/ANN_robot_control.png" width="400" alt="local_nav_ann">
-    <br>
-    <em>Thymio with weighted proximity sensors, taken from the Mobile robotics exercises of week 3. 
-     </em>
+<img src="img/local_nav/ANN_robot_control.png" width="400" alt="local_nav_ann">
+<br>
+<em>Thymio proximity sensor configuration and weights (from exercises of week 3).</em>
 </p>
 
 ### Recovery Behavior
@@ -638,6 +656,8 @@ The local navigation system achieves several important performance metrics:
 
 <p align="center">
 <img src="img/local_nav/local_nav_map.svg" width="700" alt="local_nav_mindmap">
+<br>
+<em>Local navigation control system architecture.</em>
 </p>
 
 ### Future Improvements
@@ -810,7 +830,9 @@ We determined the measurement noise covariance (x, y, θ) of the vision system b
 The odometry measurement noise for linear velocity (v) was determined through experimental trials using various target speeds (100-200). The noise was measured by commanding equal speeds to both wheels and recording the actual velocities from odometry readings.
 
 <p align="center">
-<img src="img/filtering/covariance/process_variance_linear_speed.png" width="700" alt="linear_speed_nois">
+<img src="img/filtering/covariance/process_variance_linear_speed.png" width="700" alt="linear_speed_noise">
+<br>
+<em>Linear velocity odometry measurement errors.</em>
 </p>
 
 **Angular Velocity Noise** 
@@ -818,6 +840,8 @@ The angular velocity (ω) noise was characterized through pure rotation tests, s
 
 <p align="center">
 <img src="img/filtering/covariance/process_variance_angular_speed.png" width="700" alt="angular_speed_nois">
+<br>
+<em>Angular velocity measurement errors during rotation.</em>
 </p>
 
 **Process Noise Covariance**  
@@ -828,13 +852,19 @@ For different target speeds (100-200), we commanded straight-line motion and com
 
 <p align="center">
 <img src="img/filtering/covariance/process_variance_all_translation.png" width="700" alt="translation_all">
+<br>
+<em>Translation process noise analysis.</em>
 </p>
+
 
 **Orientation and Angular Velocity Covariance (θ, ω)**  
 Similarly, we tested rotational motion through pure rotation tests at various speeds (100-200), comparing actual orientation (from camera) with expected orientation (from motion model) to determine the process noise covariance for orientation and angular velocity.
 
+
 <p align="center">
 <img src="img/filtering/covariance/process_variance_all_rotation.png" width="700" alt="angular_all">
+<br>
+<em>Rotation process noise analysis.</em>
 </p>
 
 #### Covariance Matrices Results
@@ -893,8 +923,9 @@ This integrated approach allows for robust autonomous navigation while handling 
 
 <p align="center">
 <img src="img/motion_control/motion_control.svg" width="700" alt="motion_control">
+<br>
+<em>Complete system architecture showing integration of all modules.</em>
 </p>
-
 ## Conclusion
 
 This project successfully developed an autonomous navigation system for the Thymio robot by integrating [computer vision](#computer-vision), [path planning](#global-navigation), and [state estimation](#filtering). The system combines global path planning using visibility graphs with reactive [local navigation](#local-navigation) to handle both static and dynamic obstacles. A robust EKF uses camera and odometry measurements to maintain accurate position tracking, even when visual feedback is temporarily unavailable. The implementation demonstrates reliable autonomous navigation in a controlled environment.
