@@ -885,6 +885,16 @@ def set_mode(self, covered):
         else:
             self.R = R_UNCOVERED # Measurement from camera
   ```
+<p align="center">
+<img src="img/filtering/covariance/process_variance_linear_speed.png" width="700" alt="odometry error v">
+</p><br>
+<em>Caption: Odometry Noise Covariance for linear velocity v</em>
+</p>
+<p align="center">
+<img src="img/filtering/covariance/process_variance_angular_speed.png" width="700" alt="odometry error w">
+</p><br>
+<em>Caption: Odometry Noise Covariance for angular velocity w</em>
+</p>
 ##### Process Noise Covariance Test
 For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position $$(x, y)$$ and linear velocity $$v$$, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. 
 
@@ -896,6 +906,19 @@ Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process 
    Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
    ```
    The larger values for position states reflect greater uncertainty in motion prediction.
+
+  <p align="center">
+  <img src="img/filtering/covariance/process_variance_all_rotation.png" width="700" alt="process noise angular">
+  </p><br>
+  <em>Caption: Process noise for position (x,y) and linear velocity v</em>
+  </p>
+  
+  <p align="center">
+  <img src="img/filtering/covariance/process_variance_all_translation.png" width="700" alt="process noise linear">
+  </p><br>
+  <em>Caption: Process noise for orientation theta and angular velocity w </em>
+  </p>
+  
    
 #### Key Features
 
