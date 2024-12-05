@@ -276,7 +276,7 @@ This transformation allows us to:
 - Simplify obstacle detection and path planning algorithms
 
 <p align="center">
-<img src="img/vision/obstacles/process.png" width="700" alt="process_frame">
+<img src="img/vision/obstacles/process.png" width="1200" alt="process_frame">
 <br>
 <em>Camera view and transformed view.</em>
 </p>
