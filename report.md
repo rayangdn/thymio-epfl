@@ -449,7 +449,7 @@ PyVisGraph's `build()` function constructs a visibility graph from collections o
 
 ### Path Planning 
 
-Once the visibility graph is constructed, we compute the shortest path using Dijkstra's algorithm implementend int the PyVisGraph's `shortest_path()`function:
+Once the visibility graph is constructed, we compute the shortest path using [Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) implementend in the PyVisGraph's `shortest_path()`function:
 
 ```python
 shortest_path = graph.shortest_path(start, end)
