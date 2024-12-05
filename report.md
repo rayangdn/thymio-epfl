@@ -1,6 +1,6 @@
 # Mobile Robots Project: Autonomous Navigation and Control
 
-# Table of Contents
+## Table of Contents
 - [Overview](#overview)
   - [Objectives](#objectives)
   - [Hardware](#hardware)
@@ -926,13 +926,14 @@ This integrated approach allows for robust autonomous navigation while handling 
 <br>
 <em>Complete system architecture showing integration of all modules.</em>
 </p>
+
 ## Conclusion
 
 This project successfully developed an autonomous navigation system for the Thymio robot by integrating [computer vision](#computer-vision), [path planning](#global-navigation), and [state estimation](#filtering). The system combines global path planning using visibility graphs with reactive [local navigation](#local-navigation) to handle both static and dynamic obstacles. A robust EKF uses camera and odometry measurements to maintain accurate position tracking, even when visual feedback is temporarily unavailable. The implementation demonstrates reliable autonomous navigation in a controlled environment.
 
 Looking ahead, several key improvements could further enhance the system's capabilities. The vision system could be upgraded to use modern object detection models like YOLOv8 for handling diverse obstacle types, while implementing Visual SLAM would eliminate the need for ArUco markers. The global navigation module could benefit from more efficient path planning algorithms like RRTs or potential fields for complex environments, along with dynamic obstacle handling. The local navigation system could be enhanced with PID control for better performance on challenging surfaces, and upgrading to time-of-flight sensors would enable more proactive obstacle avoidance. Finally, the state estimation could be improved by implementing a particle filter for better handling of non-linear dynamics, along with dynamic noise covariance adjustment based on robot speed. These enhancements would make the system more robust and suitable for real-world applications beyond the controlled environment.
 
-# References
+## References
 1. MOBOTS Laboratory. EPFL. Available at: https://www.epfl.thymio.org/
 2. OpenCV Documentation:
    - Camera Calibration Guide: https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html
