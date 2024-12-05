@@ -489,7 +489,7 @@ The complete implementation pipeline is detailed below:
 ### Futur improvements
 - Replace PyVisGraph with a custom visibility graph implementation that enforces map boundaries, preventing path planning outside valid areas
   
-- Explore alternative path planning algorithms (such as [RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)  or [grid-based methods](https://www.sciencedirect.com/science/article/pii/S1474667016327410),both O(nlog n) complexity) to improve computational efficiency from current O(n²log n) complexity
+- Explore alternative path planning algorithms (such as [RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)  or [grid-based methods](https://www.sciencedirect.com/science/article/pii/S1474667016327410), both O(nlog n) complexity) to improve computational efficiency from current O(n²log n) complexity
   
 - Add dynamic obstacle handling capability to update paths based on newly detected obstacles from the vision system
   
