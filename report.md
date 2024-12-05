@@ -380,7 +380,7 @@ The current vision system could be improve to handle more realistic scenarios by
 
 
 ## Global navigation
-The aim of global navigation is to find a collision-free path from the start position to the goal position. To this end, we must gather a global map of the environment, a start and goal position (obtained from the camera at the beginning) , a path planning algorithm (Djikstra's algorithm in our case) and a path following module. 
+The aim of global navigation is to find a collision-free path from the start position to the goal position. To this end, we must gather a global map of the environment, a start and goal position, a path planning algorithm and a path following module. 
 
 Furthermore, optimality can be defined with respect to different criteria, such as length, execution time, energy consumption and more. In our case, the visibility graph and Djikstra's algorithm allow us to find the shortest path (length) from the start node to the end node, in the context of road-map graphs.
 
@@ -432,11 +432,11 @@ The obstacle extension process:
 <img src="img/global_nav/extended_obstacles.png" width="700" alt="extended obstacles">
 </p>
 
-In conclusion, before handing these obstacles to the Visibility Graph `build()` method, we must perform an a priori expansion of obstacles, taking into account the geometry of the Thymio Robot and a security margin, for our algorithm to be implemented robustly. The `SECURITY_MARGIN` value has been empirically proven to be sufficient to not graze obstacles. This additional step is necessary due to the fact the Visibility Graph makes the assumption of a mass-less, holonomic, pointlike robot.
+In conclusion, before handing these obstacles to the Visibility Graph `build()` method, we must perform an a priori expansion of obstacles, taking into account the geometry of the Thymio Robot and the security margin, for our algorithm to be implemented robustly. The `SECURITY_MARGIN` value has been empirically proven to be sufficient to not graze obstacles. This additional step is necessary due to the fact the Visibility Graph makes the assumption of a mass-less, holonomic, pointlike robot.
 The `SECURITY_MARGIN` also accounts for the uncertainty in the robot's position covariance as well as the detection of obstacles (done through camera vision).  
 
 ### Visibility Graph
-For the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. We utilize the [Pyvisgraph library](https://github.com/TaipanRex/pyvisgraph), which given a set of simple obstacle polygons, builds a visibility graph. We have chosen Visibility Graphs as they are well documented, well known, provide a complete solution and more that make it stand out in comparison to other methods such as Voronoi diagrams or adaptive-cell decomposition.
+For the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. We utilize the [Pyvisgraph library](https://github.com/TaipanRex/pyvisgraph), which given a set of simple obstacle polygons, builds a visibility graph. We have chosen Visibility Graphs as they are well documented, well known and provide a complete solution that make it stand out in comparison to other methods such as Voronoi diagrams or adaptive-cell decomposition.
 
 #### Visibility Graph Construction
 
