@@ -455,7 +455,7 @@ graph.build(polygon_obstacles, status=False)
 PyVisGraph's `build()` function constructs a visibility graph from collections of polygonal obstacles. Each obstacle is defined by an array of vertex coordinates describing its geometric shape. 
 
 ### Path Planning 
-Once the visibility graph is constructed, we compute the shortest path using [Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) implemented in the PyVisGraph's `shortest_path()`function. This approach guarantees finding the shortest geometric path between start and goal. 
+Once the visibility graph is constructed, we compute the shortest path using [Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) implemented in the PyVisGraph's `shortest_path()`function.  
 
 ```python
 shortest_path = graph.shortest_path(start, end)
@@ -476,9 +476,6 @@ The path computation:
 <img src="img/global_nav/trajectory.png" width="700" alt="extended obstacles">
 </p>
 
-Finally, the `get_trajectory()` function combines everything and handles the visualization.
-
-This navigation algorithm is computationally efficient enough to enable real-time computation, allowing for immediate path recalculation in scenarios like local avoidance or kidnapping. Outside of these special cases, the path is calculated only once at the begining. 
 
 #### Key Features
 
@@ -495,7 +492,6 @@ The complete implementation pipeline is detailed below:
 <p align="center">
 <img src="img/global_nav/global_nav_map.svg" width="700" alt="extended obstacles">
 </p>
-
 
 #### Considerations  
 - Our implementation of global navigation does not account for dynamic obstacles, as we intentionally avoid using camera vision to update obstacles when new ones are detected. This approach is designed to test and challenge the local navigation system, which is capable of reacting to unexpected and unknown obstacles. If the path becomes blocked, we handle recovery by recomputing a new global path, after performing local obstacle avoidance. 
@@ -910,6 +906,8 @@ Our EKF implementation provides several important capabilities:
 
 ## Motion Control
 
+
+This navigation algorithm is computationally efficient enough to enable real-time computation, allowing for immediate path recalculation in scenarios like local avoidance or kidnapping. Outside of these special cases, the path is calculated only once at the begining. 
 The motion control system integrates all our implemented modules to effectively guide the Thymio robot:
 
 1. The **Vision System** (🩷) and **Odometry** provide input to the **Extended Kalman Filter**(💜) for accurate state estimation
