@@ -715,7 +715,7 @@ $$x_k = f(x_{k-1}, u_{k-1})$$
 Covariance Prediction:
 $$P_k = F_k P_{k-1} F_k^T + Q_k$$
 
-The Jacobian F of the motion model is computed for covariance propagation:
+The Jacobian $F$ of the motion model is computed for covariance propagation:
 
 $$
 F = \begin{bmatrix} 
