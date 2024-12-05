@@ -375,7 +375,7 @@ The current vision system could be improve to handle more realistic scenarios by
 
 
 ## Global navigation
-The aim of global navigation is to find a collision-free path from the start position to the goal position. To this end, we must gather a global map of the environment, a start and goal position (obtained from the camera at the beginning) , a path planning algorithm (Djikstra's algorithm in our case) and a path following module. 
+The aim of global navigation is to find a collision-free path from the start position to the goal position. To this end, we must gather a global map of the environment, a start and goal position, a path planning algorithm and a path following module. 
 
 Furthermore, optimality can be defined with respect to different criteria, such as length, execution time, energy consumption and more. In our case, the visibility graph and Djikstra's algorithm allow us to find the shortest path (length) from the start node to the end node, in the context of road-map graphs.
 
@@ -427,11 +427,11 @@ The obstacle extension process:
 <img src="img/global_nav/extended_obstacles.png" width="700" alt="extended obstacles">
 </p>
 
-In conclusion, before handing these obstacles to the Visibility Graph `build()` method, we must perform an a priori expansion of obstacles, taking into account the geometry of the Thymio Robot and a security margin, for our algorithm to be implemented robustly. The `SECURITY_MARGIN` value has been empirically proven to be sufficient to not graze obstacles. This additional step is necessary due to the fact the Visibility Graph makes the assumption of a mass-less, holonomic, pointlike robot.
+In conclusion, before handing these obstacles to the Visibility Graph `build()` method, we must perform an a priori expansion of obstacles, taking into account the geometry of the Thymio Robot and the security margin, for our algorithm to be implemented robustly. The `SECURITY_MARGIN` value has been empirically proven to be sufficient to not graze obstacles. This additional step is necessary due to the fact the Visibility Graph makes the assumption of a mass-less, holonomic, pointlike robot.
 The `SECURITY_MARGIN` also accounts for the uncertainty in the robot's position covariance as well as the detection of obstacles (done through camera vision).  
 
 ### Visibility Graph
-For the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. We utilize the [Pyvisgraph library](https://github.com/TaipanRex/pyvisgraph), which given a set of simple obstacle polygons, builds a visibility graph. We have chosen Visibility Graphs as they are well documented, well known, provide a complete solution and more that make it stand out in comparison to other methods such as Voronoi diagrams or adaptive-cell decomposition.
+For the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. We utilize the [Pyvisgraph library](https://github.com/TaipanRex/pyvisgraph), which given a set of simple obstacle polygons, builds a visibility graph. We have chosen Visibility Graphs as they are well documented, well known and provide a complete solution that make it stand out in comparison to other methods such as Voronoi diagrams or adaptive-cell decomposition.
 
 #### Visibility Graph Construction
 
@@ -514,7 +514,7 @@ The complete implementation pipeline is detailed below:
 
 - The requirements of this project do not allow repositioning of obstacles during the experiment. If this were a requirement, dynamic obstacle handling capability to update paths based on newly detected obstacles from the vision system should be added.
  
-- The worst-case complexity is at least O(n²log n) for constructing the [Visibility Graph]([https://github.com/TaipanRex/pyvisgraph](https://github.com/TaipanRex/pyvisgraph/tree/master)), where n is the number of vertices. This arises in scenarios where all vertices are mutually visible, requiring visibility checks for every pair of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles, where the number of vertices and potential edges can grow rapidly. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees ([RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,[Grid-based methods](https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
+- The worst-case complexity is at least O(n²log n) for constructing the [Visibility Graph]([https://github.com/TaipanRex/pyvisgraph](https://github.com/TaipanRex/pyvisgraph/tree/master)), where n is the number of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees ([RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,[Grid-based methods](https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
 
 ## Local Navigation
 
@@ -910,8 +910,8 @@ Our EKF implementation provides several important capabilities:
 ✓ Smooth trajectory estimation for control
 
 #### Future Improvements
-- EKF works well with motion models with mild non-linearities, and uncertainties are roughly Gaussian with zero mean. It can fail when systems are highly non-linear or have multi-modal distributions. In such cases, a [Particle Filter](https://en.wikipedia.org/wiki/Particle_filter) assumes the state-space model can be nonlinear and the initial state and noise distributions can take any form required. This allows it to better handle multi-modal distributions and severe non-linearities.
-- Implement adaptive noise covariance matrices (Q and R).Dynamically adjust process and measurement noise based on robot's speed, as higher speeds may need larger process noise
+- EKF works well with motion models with mild non-linearities (as in our case), and uncertainties are roughly Gaussian with zero mean. It can fail when systems are highly non-linear or have multi-modal distributions. In such cases, a [Particle Filter](https://en.wikipedia.org/wiki/Particle_filter) assumes the state-space model can be nonlinear and the initial state and noise distributions can take any form required. This allows it to better handle multi-modal distributions and severe non-linearities.
+- Implement adaptive noise covariance matrices (Q and R). Dynamically adjust process and measurement noise based on robot's speed, as higher speeds may need larger process noise
 - Add acceleration states to improve motion prediction
 - To improve our robustness, we may implement outlier detection by implement Chi-square testing for measurement validation, developing adaptive thresholds for measurement acceptance, and including measurement history analysis for anomaly detection.
 
