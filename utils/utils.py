@@ -23,27 +23,21 @@ def add_label(image, text):
                 0.7, (255, 255, 255), 2)
     return label_image
 
-def display_frames(original_frame=None, processed_frame=None, trajectory_frame=None, save_dir=None):
+def display_frames(original_frame=None, processed_frame=None, trajectory_frame=None, video_writer=None):
     frames = []
     frame_labels = ["Original Frame", "Processed Frame", "Trajectory Frame"]
     input_frames = [original_frame, processed_frame, trajectory_frame]
     
-    # Process each frame that exists
     for frame, label in zip(input_frames, frame_labels):
         if frame is not None:
-            # Convert to RGB
-           # frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            # Add label
             labeled_frame = add_label(frame, label)
             frames.append(labeled_frame)
     
-    if not frames:  # If no valid frames
+    if not frames:
         return
     
-    # Find the maximum height among all frames
     max_height = max(frame.shape[0] for frame in frames)
     
-    # Resize all frames to have the same height while maintaining aspect ratio
     resized_frames = []
     for frame in frames:
         if frame.shape[0] != max_height:
@@ -54,25 +48,17 @@ def display_frames(original_frame=None, processed_frame=None, trajectory_frame=N
         else:
             resized_frames.append(frame)
     
-    # Concatenate all frames horizontally
     combined_frame = np.hstack(resized_frames)
     
-    # Save the combined frame if save_dir is provided
-    if save_dir is not None:
-        # Create directory if it doesn't exist
-        os.makedirs(save_dir, exist_ok=True)
-        # Generate timestamp for unique filename
-        # Create full save path with filename
-        save_path = os.path.join(save_dir, 'frame.jpg')
-        # Save the frame
-        cv2.imwrite(save_path, combined_frame)
+    if video_writer is not None:
+        video_writer.write(combined_frame)
         
-    # Convert to jpg and display
     _, buffer = cv2.imencode('.jpg', combined_frame)
     display(Image(data=buffer.tobytes()))
     clear_output(wait=True)
     
     return combined_frame
+
 def display_processing_steps(steps):
     # Define number of columns and rows
     n_cols = 2
