@@ -478,7 +478,7 @@ The path computation:
 
 Finally, the `get_trajectory()` function combines everything and handles the visualization.
 
-This navigation algorithm is computationally efficient enough to enable real-time computation, allowing for immediate path recalculation in scenarios like local avoidance or kidnapping.
+This navigation algorithm is computationally efficient enough to enable real-time computation, allowing for immediate path recalculation in scenarios like local avoidance or kidnapping. Outside of these special cases, the path is calculated only once at the begining. 
 
 #### Key Features
 
