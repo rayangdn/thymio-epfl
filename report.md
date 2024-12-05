@@ -513,7 +513,7 @@ The complete implementation pipeline is detailed below:
 
 - The requirements of this project do not allow repositioning of obstacles during the experiment. If this were a requirement, dynamic obstacle handling capability to update paths based on newly detected obstacles from the vision system should be added.
  
-- The worst-case complexity is at least O(n²log n) for constructing the [Visibility Graph]([https://github.com/TaipanRex/pyvisgraph](https://github.com/TaipanRex/pyvisgraph/tree/master)), where n is the number of vertices. This arises in scenarios where all vertices are mutually visible, requiring visibility checks for every pair of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles, where the number of vertices and potential edges can grow rapidly. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees ([RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,(https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
+- The worst-case complexity is at least O(n²log n) for constructing the [Visibility Graph]([https://github.com/TaipanRex/pyvisgraph](https://github.com/TaipanRex/pyvisgraph/tree/master)), where n is the number of vertices. This arises in scenarios where all vertices are mutually visible, requiring visibility checks for every pair of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles, where the number of vertices and potential edges can grow rapidly. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees ([RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,[Grid-based methods](https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
 
 ## Local Navigation
 
@@ -681,15 +681,13 @@ The EKF implementation handles this by processing measurements from both sensors
 ### Extended Kalman Filter Model
 We are using the following model for extended Kalman filter implementation:
 $$ 
-\begin{align*}
-\hat{x}_k = f(\hat{x}_{k-1}, u_{k-1}) + w_{k-1}
-\end{align*}
+x_k = f(x_{k-1}, u_{k-1}) + w_{k-1}
 $$
 
-where $$\hat{x}_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
+where $$x_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
 
 $$ \begin{align*}
-z_k = h(\hat{x}_k) + v_k
+z_k = h(x_k) + v_k
 \end{align*}$$
 
 where $$z_k$$ is the observation vector, $$h$$ is the observation function and $$v_k$$ is the measurement noise, assumed Gaussian with zero mean and covariance matrix $$R_k$$.
@@ -704,6 +702,7 @@ $$
 This specific choice of the state vector allows us to simplify to the maximum extent possible our observation model, since are our measurements correspond exactly to the state vector. This choice is intuitive and easy-to-use for navigation and motion control. The trade-off is that we must convert between wheel velocities ($$v_{left}$$ and $$v_{right}$$) and robot velocities ($$v$$ and $$\omega$$).
 
 We assume a system described by a nonlinear model. This nonlinear state transition function $$f$$ is: 
+
 **State Transition Model**
 
 $$
@@ -750,7 +749,7 @@ The prediction step uses the differential drive model to estimate the robot's ne
 We predict the state at time $$k$$:
 
 $$ \begin{align*}
-\hat{x}_k^- = f(\hat{x}_{k-1}, u_{k-1})
+x_k = f(x_{k-1}, u_{k-1})
 \end{align*}$$
 
 
@@ -760,7 +759,7 @@ P_k = F_k P_{k-1} F_k^T + Q_k
 
 and compute the predicted covariance $$P_k$$ of the state estimate. 
 
-This Prediction step is done in the `predict() function. 
+This Prediction step is done in the `predict()` function. 
 
 ```python
 def predict(self, u):
@@ -863,7 +862,7 @@ In this notebook, we first perform a speed conversion test, which allows us to d
 To represent the measurement error on $$(x,y,\theta)$$. For this task, we collect a sample of 500 camera photographs of a given map configuration, obstacle selection and robot position. Using our Vision module to obtain the Thymio position and orientation from such a frame, we then compute the Camera Measurement Covariance on $$(x,y,\theta)$$.
 
 ##### Odometry Noise Covariance Test
-The odometry measurement noise on the linear velocity $$v$$  is established by performing 5 trials at 6 selected target values of the speed. The targed_speeds are communicated to the Thymio as a control input set_motor_speed(target_v, target_v), having the left and right velocity equal to the target velocity. Finally, we collect the Thymio's odometry values with: left, right = get_motor_speed(). We therefore obtain the error distribution at different target speeds. 
+The odometry measurement noise on the linear velocity $$v$$  is established by performing 5 trials at 6 selected target values of the speed. The targed_speeds are communicated to the Thymio as a control input `set_motor_speed(target_v, target_v)`, having the left and right velocity equal to the target velocity. Finally, we collect the Thymio's odometry values with: `get_motor_speed()`. We therefore obtain the error distribution on $$v$$ at different target speeds. 
 A similar approach is followed to compute the measurement noise on the angular velocity $$\omega$$. This also forms part of the odometry measurement error. 
 
 **Measurement Noise (R)**: Adapts based on camera visibility:
@@ -890,10 +889,10 @@ def set_mode(self, covered):
             self.R = R_UNCOVERED # Measurement from camera
   ```
 ##### Process Noise Covariance Test
-For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position (x, y) and linear velocity v, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. This approach is further supported by the fact that we will capture multiple images of both the starting and ending frames (how many?), and average them to obtain an estimate of the ground truth, which ideally has zero-mean error.
+For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position $$(x, y)$$ and linear velocity $$v$$, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. 
 
-The x,y and v process noise covariance test is done in the following manner. We have a selection of target speeds, and for each value we do 5 trials. At each target speed, we set the motor speed to that target, let the robot move for a certain time duration, collect the actual_position of the robot at the end through the camera vision, and analytically compute the expected_position of the robot at the end using the state transition model detailed previously. With these two values, we can compute the process variance on x, y and v. 
-Finally, for the orientation theta and angular velocity w process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
+The $$(x,y,v)$$ process noise covariance test is done in the following manner. We have a selection of target speeds, and for each value we do 5 trials. At each target speed, we set the motor speed to that target, let the robot move for a certain time duration, collect the actual_position of the robot at different timestamps through the camera vision, and analytically compute the expected_position of the robot at different timestamps using the state transition model detailed previously. With these two values, we can compute the process variance on $$(x,y,v)$$. 
+Finally, for the orientation $$\theta$$ and angular velocity $$\w$$ process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
             
  **Process Noise (Q)**: Models uncertainty in the motion model:
    ```python
