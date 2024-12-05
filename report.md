@@ -915,7 +915,8 @@ Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process 
   
   <p align="center">
   <img src="img/filtering/covariance/process_variance_all_translation.png" width="700" alt="process noise linear">
-  </p><br>
+  </p>
+  <p align="center">
   <em>Process noise for orientation theta and angular velocity w </em>
   </p>
   
