@@ -36,6 +36,7 @@
     - [Noise Covariance Matrices](#noise-covariance-matrices)
 - [Motion Control](#motion-control)
 - [Conclusion](#conclusion)
+- [References](#references)
 
 ## Overview
 This project was developed as part of the **Basics of Mobile Robotics (MICRO-452)** course at EPFL, under the supervision of Professor Francesco Mondada from the [MOBOTS Laboratory](https://www.epfl.ch/labs/mobots/).
@@ -373,7 +374,6 @@ The current vision system could be improve to handle more realistic scenarios by
 * Replacing binary color detection (black/white) with object detection ML models like [YOLOv8](https://yolov8.com/) to support varied colors, more complex shapes and textures
 * Removing ArUco marker dependency by implementing [Visual SLAM](https://cvg.cit.tum.de/research/vslam)
 
-
 ## Global navigation
 
 The global navigation module employs a visibility graph approach for optimal path planning, enabling the Thymio robot to navigate efficiently around static obstacles. The implementation is based on the [PyVisGraph library](https://github.com/TaipanRex/pyvisgraph) which efficiently constructs visibility graphs from detected polygonal obstacles. This library was chosen for its ease of use. The module interfaces directly with our [vision based](#computer-vision) obstacle detection system to maintain an accurate environmental model.
@@ -648,7 +648,6 @@ The local navigation system achieves several important performance metrics:
 The localization system implements an Extended Kalman Filter (EKF) to fuse measurements from multiple sensors and provide robust state estimation. The EKF combines wheel odometry data with camera-based position measurements to maintain accurate tracking of the robot's pose and velocities, even when visual measurements are temporarily unavailable.
 
 We chose the Extended Kalman Filter (EKF) for its balance of robustness and efficiency. While the standard Kalman Filter cannot handle our robot's nonlinear orientation dynamics, the EKF provides suitable nonlinear state estimation with lower computational cost than alternatives like [Particle Filters](https://en.wikipedia.org/wiki/Particle_filter). Our implementation was inspired by Automatic Addison's [Extended Kalman Filter tutorial](https://automaticaddison.com/extended-kalman-filter-ekf-with-python-code-example/).
-
 
 ### Extended Kalman Filter Model
 
@@ -1038,4 +1037,18 @@ This integrated approach allows for robust autonomous navigation while handling 
 </p>
 
 ## Conclusion
-
+## References 
+[MOBOTS Laboratory](https://www.epfl.ch/labs/mobots/).
+[Thymio II (MOBSYA)](https://www.thymio.org/).
+[Aukey Webcam](https://www.aukey.com/).
+[OpenCV's guide](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html).
+[OpenCV's Aruco module](https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html).
+[OpenCV's geometric transformations](https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html).
+[OpenCV's Canny Edge Detection](https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html).
+[Contour Detection](https://docs.opencv.org/3.4/d4/d73/tutorial_py_contours_begin.html).
+[YOLOv8](https://yolov8.com/).
+[Visual SLAM](https://cvg.cit.tum.de/research/vslam).
+[PyVisGraph library](https://github.com/TaipanRex/pyvisgraph).
+[Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm).
+[Particle Filters](https://en.wikipedia.org/wiki/Particle_filter).
+[Extended Kalman Filter tutorial](https://automaticaddison.com/extended-kalman-filter-ekf-with-python-code-example/).
