@@ -428,8 +428,8 @@ The obstacle extension process:
 <img src="img/global_nav/extended_obstacles.png" width="700" alt="extended obstacles">
 </p>
 
-In conclusion, before handing these obstacles to the Visibility Graph 'build()' method, we must perform an a priori expansion of obstacles, taking into account the geometry of the Thymio Robot and a security margin, for our algorithm to be implemented robustly. The 'SECURITY_MARGIN' value has been empirically proven to be sufficient to not graze obstacles. This additional step is necessary due to the fact the Visibility Graph makes the assumption of a mass-less, holonomic, pointlike robot.
-The'SECURITY_MARGIN' also accounts for the uncertainty in the robot's position covariance as well as the detection of obstacles (done through camera vision).  
+In conclusion, before handing these obstacles to the Visibility Graph `build()` method, we must perform an a priori expansion of obstacles, taking into account the geometry of the Thymio Robot and a security margin, for our algorithm to be implemented robustly. The `SECURITY_MARGIN` value has been empirically proven to be sufficient to not graze obstacles. This additional step is necessary due to the fact the Visibility Graph makes the assumption of a mass-less, holonomic, pointlike robot.
+The `SECURITY_MARGIN` also accounts for the uncertainty in the robot's position covariance as well as the detection of obstacles (done through camera vision).  
 
 ### Visibility Graph
 For the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. We utilize the [Pyvisgraph library](https://github.com/TaipanRex/pyvisgraph), which given a set of simple obstacle polygons, builds a visibility graph. We have chosen Visibility Graphs as they are well documented, well known, provide a complete solution and more that make it stand out in comparison to other methods such as Voronoi diagrams or adaptive-cell decomposition.
@@ -460,7 +460,7 @@ graph = vg.VisGraph()
 graph.build(polygon_obstacles, status=False)
 ```
 
-The way 'build()' creates the graph is by identifying all vertices (including start and goal positions), and then connecting pairs of vertices with edges if the straight line between them doesn't intersect any polygon obstacles.
+The way `build()` creates the graph is by identifying all vertices (including start and goal positions), and then connecting pairs of vertices with edges if the straight line between them doesn't intersect any polygon obstacles.
 
 ### Path Planning 
 Once the visibility graph is constructed, we compute the shortest path using [Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) implemented in the PyVisGraph's `shortest_path()`function. This approach guarantees finding the shortest geometric path between start and goal. 
@@ -484,7 +484,7 @@ The path computation:
 <img src="img/global_nav/trajectory.png" width="700" alt="extended obstacles">
 </p>
 
-Finally, the 'get_trajectory()' function combines everything and handles the visualization.
+Finally, the `get_trajectory()` function combines everything and handles the visualization.
 
 This navigation algorithm is computationally efficient enough to enable real-time computation, allowing for immediate path recalculation in scenarios like local avoidance or kidnapping.
 
@@ -508,14 +508,14 @@ The complete implementation pipeline is detailed below:
 #### Considerations  
 - Our implementation of global navigation does not account for dynamic obstacles, as we intentionally avoid using camera vision to update obstacles when new ones are detected. This approach is designed to test and challenge the local navigation system, which is capable of reacting to unexpected and unknown obstacles. If the path becomes blocked, we handle recovery by recomputing a new global path, after performing local obstacle avoidance. 
   
-- The potential issues arising from treating the robot as a point, in terms of robot kinematics and dynamics, are taken care of in the Local Navigation module, where we establish a MAX_ROTATION_SPEED, a MIN_TRANSLATION_SPEED, a MAX_TRANSLATION_SPEED and much more. ???
+- The potential issues arising from treating the robot as a point, in terms of robot kinematics and dynamics, are taken care of in the Local Navigation module, where we establish a `MAX_ROTATION_SPEED`, a `MIN_TRANSLATION_SPEED`, a `MAX_TRANSLATION_SPEED` and much more. ???
 
 #### Future Improvements
-- The Visibility Graph does not account for map boundaries. As a result, if an obstacle is close to the map's edge, the graph may generate a path that goes outside the map to reach the goal, even if there isn’t enough space for the robot to pass between the obstacle and the boundary. This occurs because the ==shortest_path()== computation imposes no constraints to ensure the path remains within the map's defined area. When attempting to enforce such constraints, we observed that the extended corner of an obstacle near the map boundary may fall outside the map. This causes the entire obstacle to be invalidated and treated as nonexistent, leading the graph to incorrectly assume there is no obstacle and to generate a path that crosses directly over it. This limitation in our implementation highlights an opportunity for improvement, as designing a custom visibility graph algorithm could better handle such edge cases.
+- The Visibility Graph does not account for map boundaries. As a result, if an obstacle is close to the map's edge, the graph may generate a path that goes outside the map to reach the goal, even if there isn’t enough space for the robot to pass between the obstacle and the boundary. This occurs because the `shortest_path()` computation imposes no constraints to ensure the path remains within the map's defined area. When attempting to enforce such constraints, we observed that the extended corner of an obstacle near the map boundary may fall outside the map. This causes the entire obstacle to be invalidated and treated as nonexistent, leading the graph to incorrectly assume there is no obstacle and to generate a path that crosses directly over it. This limitation in our implementation highlights an opportunity for improvement, as designing a custom visibility graph algorithm could better handle such edge cases.
 
-- The requirements of this project do not allow repositioning of obstacles during the experiment. If this were a requirement, dynamic obstacle handling capability to update paths based on newly detected obstacles from the vision system should be added. 
-  
-- The worst-case complexity for constructing the Visibility Graph is at least O(n²log n)(https://github.com/TaipanRex/pyvisgraph/tree/master), where n is the number of vertices. This arises in scenarios where all vertices are mutually visible, requiring visibility checks for every pair of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles, where the number of vertices and potential edges can grow rapidly. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees (RRTs (https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,(https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
+- The requirements of this project do not allow repositioning of obstacles during the experiment. If this were a requirement, dynamic obstacle handling capability to update paths based on newly detected obstacles from the vision system should be added.
+ 
+- The worst-case complexity is at least O(n²log n) for constructing the [Visibility Graph]([https://github.com/TaipanRex/pyvisgraph](https://github.com/TaipanRex/pyvisgraph/tree/master)), where n is the number of vertices. This arises in scenarios where all vertices are mutually visible, requiring visibility checks for every pair of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles, where the number of vertices and potential edges can grow rapidly. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees ([RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,[Grid-based methods](https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
 
 ## Local Navigation
 
@@ -651,6 +651,10 @@ The local navigation system achieves several important performance metrics:
 <img src="img/local_nav/local_nav_map.svg" width="700" alt="local_nav_mindmap">
 </p>
 
+### Future Imporovements
+
+- The environment, in which the Thymio robot is moving, is quite predictable, as in not very slippery and despite the little motor speed corrections we apply in this module. In a more slippery or rough terrain (like running on water or moving on a carpet), it could be a good idea to implement a PID controller instead of the simple P controller that we have here... it would ensure more precise movements and pose estimation.
+- For the obstacle avoidance loop, a possible improvement could be to use better time of flight (TOF) sensors instead of the infrared proximity sensors, that would allow the Thymio robot to detect local obstacles from further away, and thus plan corrections ahead.
 
 ## Filtering
 The motivation behind filtering is the fact that we seek to represent a world which is perceived with errors, on which we do actions that do not correspond exactly to our orders, and with maps that are uncertain. To this end, we aim to improve the estimation of our state X, after having incorporated sensor data.
@@ -671,8 +675,6 @@ v{i+1} &= v_i \\
 
 where $\Delta t$ is the time step between updates.
 
-EXPLAIN WE DON'T VARY (FIXED) V AND W between two segments, two control inputs.??
-
 We have chosen the Extended Kalman Filter (EKF) model because it's well documented, well known and compared to other methods such as the Particle Filter, it is less computationally expensive.
 The selection of the EKF over the standard Kalman Filter is due to the nonlinearity of the model with respect to the orientation of the robot. The standard Kalman Filter formulation is not sufficient for such cases.
 
@@ -680,16 +682,14 @@ The EKF implementation handles this by processing measurements from both sensors
 
 ### Extended Kalman Filter Model
 We are using the following model for extended Kalman filter implementation:
-$$ 
-\begin{align*}
-\hat{x}_k = f(\hat{x}_{k-1}, u_{k-1}) + w_{k-1}
-\end{align*}
-$$
+$$ \begin{align*}
+x_k = f(x_{k-1}, u_{k-1}) + w_{k-1}
+\end{align*}$$
 
-where $$\hat{x}_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
+where $$x_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
 
 $$ \begin{align*}
-z_k = h(\hat{x}_k) + v_k
+z_k = h(x_k) + v_k
 \end{align*}$$
 
 where $$z_k$$ is the observation vector, $$h$$ is the observation function and $$v_k$$ is the measurement noise, assumed Gaussian with zero mean and covariance matrix $$R_k$$.
@@ -701,9 +701,10 @@ $$
 x = \begin{bmatrix} x & y & \theta & v & \omega \end{bmatrix}^T
 $$
 
-This specific choice of the state vector allows us to simplify to the maximum extent possible our observation model.
+This specific choice of the state vector allows us to simplify to the maximum extent possible our observation model, since are our measurements correspond exactly to the state vector. This choice is intuitive and easy-to-use for navigation and motion control. The trade-off is that we must convert between wheel velocities ($$v_{left}$$ and $$v_{right}$$) and robot velocities ($$v$$ and $$\omega$$).
 
 We assume a system described by a nonlinear model. This nonlinear state transition function $$f$$ is: 
+
 **State Transition Model**
 
 $$
@@ -728,7 +729,7 @@ F = \begin{bmatrix}
 \end{bmatrix}
 $$
 
-The state transition is implemented in the ==predict()== function, which will be explicited in the Prediction Step part.
+The state transition is implemented in the `predict()` function, which will be explicited in the Prediction Step part.
         
 **Observation Model**
 Our measurement function $$h$$ is:
@@ -750,7 +751,7 @@ The prediction step uses the differential drive model to estimate the robot's ne
 We predict the state at time $$k$$:
 
 $$ \begin{align*}
-\hat{x}_k^- = f(\hat{x}_{k-1}, u_{k-1})
+x_k = f(x_{k-1}, u_{k-1})
 \end{align*}$$
 
 
@@ -760,7 +761,7 @@ P_k = F_k P_{k-1} F_k^T + Q_k
 
 and compute the predicted covariance $$P_k$$ of the state estimate. 
 
-This Prediction step is done in the ==predict()== function. 
+This Prediction step is done in the `predict()` function. 
 
 ```python
 def predict(self, u):
@@ -829,7 +830,7 @@ This is a special case of the EKF where:
 
 This hybrid approach maintains the EKF's ability to handle nonlinear motion while benefiting from the computational simplicity of linear measurements.
 
-We implement this in the ==update()== function:
+We implement this in the `update()` function:
 ```python
     # Convert wheel velocities to robot velocities
     measurement[3], measurement[4] = self._compute_velocity(measurement[3], measurement[4])
@@ -860,10 +861,10 @@ Such set-up and results are found in the run_test.ipynb notebook.
 In this notebook, we first perform a speed conversion test, which allows us to determine the value of SPEED_TO_MM_S = 2.9466 (?? CHANGE)
 
 ##### Camera Noise Covariance Test 
-To represent the measurement error on x, y and theta. For this task, we collect a sample of 500 camera photographs of a given map configuration, obstacle selection and robot position. Using our Vision module to obtain the Thymio position and orientation from such a frame, we then compute the Camera Measurement Covariance on x, y and theta. 
+To represent the measurement error on $$(x,y,\theta)$$. For this task, we collect a sample of 500 camera photographs of a given map configuration, obstacle selection and robot position. Using our Vision module to obtain the Thymio position and orientation from such a frame, we then compute the Camera Measurement Covariance on $$(x,y,\theta)$$.
 
 ##### Odometry Noise Covariance Test
-The odometry measurement noise on the linear velocity $$v$$  is established by performing 5 trials at 6 selected target values of the speed. The targed_speeds are communicated to the Thymio as a control input set_motor_speed(target_v, target_v), having the left and right velocity equal to the target velocity. Finally, we collect the Thymio's odometry values with: left, right = get_motor_speed(). We therefore obtain the error distribution at different target speeds. 
+The odometry measurement noise on the linear velocity $$v$$  is established by performing 5 trials at 6 selected target values of the speed. The targed_speeds are communicated to the Thymio as a control input `set_motor_speed(target_v, target_v)`, having the left and right velocity equal to the target velocity. Finally, we collect the Thymio's odometry values with: `get_motor_speed()`. We therefore obtain the error distribution on $$v$$ at different target speeds. 
 A similar approach is followed to compute the measurement noise on the angular velocity $$\omega$$. This also forms part of the odometry measurement error. 
 
 **Measurement Noise (R)**: Adapts based on camera visibility:
@@ -890,10 +891,10 @@ def set_mode(self, covered):
             self.R = R_UNCOVERED # Measurement from camera
   ```
 ##### Process Noise Covariance Test
-For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position (x, y) and linear velocity v, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. This approach is further supported by the fact that we will capture multiple images of both the starting and ending frames (how many?), and average them to obtain an estimate of the ground truth, which ideally has zero-mean error.
+For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position $$(x, y)$$ and linear velocity $$v$$, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. 
 
-The x,y and v process noise covariance test is done in the following manner. We have a selection of target speeds, and for each value we do 5 trials. At each target speed, we set the motor speed to that target, let the robot move for a certain time duration, collect the actual_position of the robot at the end through the camera vision, and analytically compute the expected_position of the robot at the end using the state transition model detailed previously. With these two values, we can compute the process variance on x, y and v. 
-Finally, for the orientation theta and angular velocity w process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
+The $$(x,y,v)$$ process noise covariance test is done in the following manner. We have a selection of target speeds, and for each value we do 5 trials. At each target speed, we set the motor speed to that target, let the robot move for a certain time duration, collect the actual_position of the robot at different timestamps through the camera vision, and analytically compute the expected_position of the robot at different timestamps using the state transition model detailed previously. With these two values, we can compute the process variance on $$(x,y,v)$$. 
+Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
             
  **Process Noise (Q)**: Models uncertainty in the motion model:
    ```python
@@ -908,6 +909,8 @@ Our EKF implementation provides several important capabilities:
 ✓ Fusion of visual and odometric measurements \
 ✓ Robust state estimation  \
 ✓ Smooth trajectory estimation for control
+
+#### Future Improvements
 
 ## Motion Control
 
