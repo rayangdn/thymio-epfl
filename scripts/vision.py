@@ -20,6 +20,9 @@ CAM_RESOLUTION = (1920, 1080)
 
 # Minimum area threshold for valid obstacle detection
 OBSTACLE_MIN_AREA = 500 # mm²
+
+# Minimum distance between corner markers
+MIN_CORNER_DISTANCE = 10 #pixels
     
 class Vision():    
     def __init__(self, device_id):
@@ -195,7 +198,7 @@ class Vision():
         self.perspective_matrix = cv2.getPerspectiveTransform(source_points, dest_points)
         self.process_roi = np.array([dest_width, dest_height]).astype(int)
     
-    def _filter_close_corners(self, corners, min_distance=10):
+    def _filter_close_corners(self, corners):
         # Return empty list if no corners
         if len(corners) == 0:
             return corners
@@ -205,7 +208,7 @@ class Vision():
         
         # Keep corners that are at least min_distance away from all kept corners
         for corner in corners[1:]:
-            if all(utils.distance(corner, kept_corner) >= min_distance for kept_corner in filtered_corners):
+            if all(utils.distance(corner, kept_corner) >= MIN_CORNER_DISTANCE for kept_corner in filtered_corners):
                 filtered_corners.append(corner)
         
         return np.array(filtered_corners)

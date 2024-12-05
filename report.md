@@ -41,10 +41,10 @@
 This project was developed as part of the **Basics of Mobile Robotics (MICRO-452)** course at EPFL, under the supervision of Professor Francesco Mondada from the [MOBOTS Laboratory](https://www.epfl.ch/labs/mobots/).
 
 ### Objectives
-We aims to develop an autonomous navigation system for the Thymio robot that can:
+We aim to develop an autonomous navigation system for the Thymio robot that can:
 1. Navigate through a predefined environment with static obstacles using global navigation
 2. Dynamically avoid unexpected obstacles using local navigation
-3. Maintain accurate position estimation through filtering
+3. Maintain accurate position estimation through Kalman filtering
 4. Reliably reach arbitrary target positions in the environment
 
 ### Hardware
@@ -82,10 +82,10 @@ In this project, we work with the Thymio II robot to create a system that helps 
 
 ### Experimental Setup and Design Choices
 
-Our experimental environment consists of a well-defined workspace measuring 120x100 centimeters, providing ample space for navigation while maintaining a controlled testing environment. We implemented several key design choices to create a robust and reliable navigation system:
+Our experimental environment consists of a well-defined workspace measuring 130x90 centimeters, providing ample space for navigation while maintaining a controlled testing environment. We implemented several key design choices to create a robust and reliable navigation system:
 
 **Localization System:**
-- Utilized ArUco markers for precise positioning
+- Use ArUco markers for precise positioning
 - Markers serve multiple purposes:
   - Defining the map boundaries
   - Marking goal positions
@@ -111,7 +111,7 @@ Our experimental environment consists of a well-defined workspace measuring 120x
   - Maintains smooth transitions between movement phases
   
 - Distance-based speed control features:
-  - Proportionally reduces linear velocity as robot nears goal
+  - Proportionally reduces linear velocity as robot gets near goal
   - Includes safety thresholds for minimum/maximum speeds
 
 - Orientation-based control characteristics:
@@ -132,6 +132,8 @@ In this video, you can see:
 - Position tracking with our vision system
 
 ## Computer Vision
+
+The vision module serves as the robot's primary sensor interface with the environment, providing critical real-time information about the robot's position, obstacles, and navigation target. The system combines camera calibration, ArUco marker detection, and perspective transformation to create a reliable overhead view of the workspace. This transformed view enables accurate obstacle detection and position tracking, which are essential for both [global path planning](#global-navigation) and [local navigation](#local-navigation).
 
 ### Calibration
 
@@ -174,7 +176,7 @@ $$
 
 #### Utilization
 
-Once calibrated, we can undistort any frame from our camera providing a more accurate representation of the scene for subsequent vision processing steps:
+Once calibrated, we can undistort any frame from the camera providing a more accurate representation of the scene for subsequent vision processing steps:
 
 ```python
 def _undistort_frame(self, frame):
@@ -244,7 +246,6 @@ def _compute_perspective_transform(self, source_points, world_width, world_heigh
     # Calculate perspective transformation matrix
     self.perspective_matrix = cv2.getPerspectiveTransform(source_points, dest_points)
 ```
-
 #### Applying the Transform
 
 Once we have the transformation matrix, we can convert any frame to a top-down view using `cv2.warpPerspective`:
@@ -270,7 +271,7 @@ This transformation allows us to:
 
 ### Obstacle Detection
 
-Our obstacle detection system combines Canny edge detection and contour finding from OpenCV to identify obstacles in the environment. The implementation is based on [OpenCV's Canny Edge Detection](https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html) and [Contour Detection](https://docs.opencv.org/3.4/d4/d73/tutorial_py_contours_begin.html) tutorials. A typical environment with different shape obstacles can be seen below:
+The obstacle detection system combines Canny edge detection and contour finding from OpenCV to identify obstacles in the environment. The implementation is based on [OpenCV's Canny Edge Detection](https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html) and [Contour Detection](https://docs.opencv.org/3.4/d4/d73/tutorial_py_contours_begin.html) tutorials. A typical environment with different shape obstacles can be seen below:
 
 <p align="center">
 <img src="img/vision/obstacles/environment.png" width="700" alt="obstacles">
@@ -334,26 +335,25 @@ We use `cv2.RETR_EXTERNAL` to only retrieve the outer contours, and `cv2.CHAIN_A
 To ensure accurate obstacle representation while minimizing computational complexity, we implement a corner filtering mechanism that removes redundant points:
 
 ```python
-def _filter_close_corners(self, corners, min_distance=10):
-    # Return empty list if no corners
-    if len(corners) == 0:
-        return corners
-    
-    corners = np.array(corners)
-    filtered_corners = [corners[0]]
-    
-    # Keep corners that are at least min_distance away from all kept corners
-    for corner in corners[1:]:
-        if all(utils.distance(corner, kept_corner) >= min_distance 
-               for kept_corner in filtered_corners):
-            filtered_corners.append(corner)
-    
-    return np.array(filtered_corners)
+def _filter_close_corners(self, corners):
+        # Return empty list if no corners
+        if len(corners) == 0:
+            return corners
+        
+        corners = np.array(corners)
+        filtered_corners = [corners[0]]
+        
+        # Keep corners that are at least min_distance away from all kept corners
+        for corner in corners[1:]:
+            if all(utils.distance(corner, kept_corner) >= MIN_CORNER_DISTANCE for kept_corner in filtered_corners):
+                filtered_corners.append(corner)
+        
+        return np.array(filtered_corners)
 ```
 
 This filtering process:
 - Starts with the first corner point
-- Adds subsequent corners only if they are at least `min_distance` pixels away from all previously kept corners
+- Adds subsequent corners only if they are at least `MIN_DISTANCE` pixels away from all previously kept corners
 - Helps create a more efficient representation of obstacles while maintaining their shape accuracy
 
 Finally, the detected obstacle corners are converted from pixel coordinates to millimeters using our perspective transform scale factor. This conversion is crucial for the navigation system as it needs real-world measurements to plan paths and avoid obstacles effectively.
