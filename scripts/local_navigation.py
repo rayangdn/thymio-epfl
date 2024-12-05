@@ -8,9 +8,9 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils import utils
 
 # Angular control parameters
-ANGLE_TOLERANCE = 5 # Maximum acceptable angle error in degrees
-KP_ROTATION = 90   # Proportional gain for rotation control
-MAX_ROTATION_SPEED = 150 # Maximum rotation speed in motor units
+ANGLE_TOLERANCE = 3 # Maximum acceptable angle error in degrees
+KP_ROTATION = 100   # Proportional gain for rotation control
+MAX_ROTATION_SPEED = 200 # Maximum rotation speed in motor units
 
 # Linear motion control parameters
 DISTANCE_TOLERANCE = 50 # Maximum acceptable position error in mm

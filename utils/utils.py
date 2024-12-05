@@ -64,7 +64,7 @@ def display_frames(original_frame=None, processed_frame=None, trajectory_frame=N
     
     return combined_frame
 
-def record_frames(original_frame=None, processed_frame=None, trajectory_frame=None, video_writer=None, output_path='./vids/output.mp4', DT=0.1):
+def record_frames(original_frame=None, processed_frame=None, trajectory_frame=None, video_writer=None, output_path='./vids/output2.mp4', DT=0.1):
     combined_frame = display_frames(original_frame, processed_frame, trajectory_frame)
     
     if video_writer is None and combined_frame is not None:

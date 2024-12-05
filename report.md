@@ -578,7 +578,7 @@ The obstacle avoidance system features:
    - Asymmetric weight matrices for left/right motors:
      ```python
      WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]  # Positive weights favor right turn
-     WEIGHT_RIGHT = [-5, -8, -12, 8,  5]   # Positive weights favor left turn
+     WEIGHT_RIGHT = [-5, -8, -10, 8,  5]   # Positive weights favor left turn
      ```
    - Base speed of 100 units modified by weighted sensor readings
 
@@ -591,7 +591,7 @@ The obstacle avoidance system features:
 
 ### Recovery Behavior
 
-The system implements a recovery mechanism to transition between obstacle avoidance and path following:
+The system implements a recovery mechanism to smoothly transition between obstacle avoidance and path following:
 
 ```python
 if self._detect_obstacles(sensor_data):
@@ -616,7 +616,7 @@ else:
 Key aspects of the recovery behavior:
 
 1. **Persistence**:
-   - Maintains obstacle avoidance at least for `OBSTACLES_MAX_ITER` iterations
+   - Maintains obstacle avoidance for `OBSTACLES_MAX_ITER` iterations
    - Prevents premature switching between behaviors
 
 2. **Path Recomputation**:
@@ -658,7 +658,7 @@ The filter uses a state vector containing position (x, y), orientation (θ), and
 $$x = \begin{bmatrix} x & y & \theta & v & \omega \end{bmatrix}^T$$
 
 #### System Model
-The general form of the state transition is:
+The nonlinear state transition function $f$ describes the differential drive kinematics:
 
 $$x_k = f(x_{k-1}, u_{k-1}) + w_{k-1}, \quad w_{k-1} \sim \mathcal{N}(0, Q_k)$$
 
@@ -666,6 +666,7 @@ where:
 - $x_k$ is the state vector at time k
 - $u_{k-1}$ represents control inputs (motor commands)
 - $w_{k-1}$ is process noise modeling system uncertainties
+- $Q_k$ is the process noise covariance matrix representing uncertainty in state transitions
 - $f$ is the nonlinear state transition function
 
 #### Motion Model
@@ -684,6 +685,11 @@ where $\Delta t$ represents the time step between updates.
 #### Prediction Step
 
 The prediction step uses the differential drive model to estimate the robot's next state. The wheel velocities serve as control inputs:
+
+State Prediction:
+$$x_k = f(x_{k-1}, u_{k-1})$$
+Covariance Prediction:
+$$P_k = F_k P_{k-1} F_k^T + Q_k$$
 
 ```python
 def predict(self, u):
@@ -808,71 +814,13 @@ Our EKF implementation provides several important capabilities:
 ✓ Smooth trajectory estimation for control
 
 
-### Extended Kalman Filter Model
-We are using the following model for extended Kalman filter implementation:
-$$ \begin{align*}
-x_k = f(x_{k-1}, u_{k-1}) + w_{k-1}
-\end{align*}$$
 
-where $$x_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
-
-$$ \begin{align*}
-z_k = h(x_k) + v_k
-\end{align*}$$
-
-where $$z_k$$ is the observation vector, $$h$$ is the observation function and $$v_k$$ is the measurement noise, assumed Gaussian with zero mean and covariance matrix $$R_k$$.
-
-
-The filter maintains a state vector containing the robot's position (x, y), orientation (θ), and velocities (v, ω):
-
-$$
-x = \begin{bmatrix} x & y & \theta & v & \omega \end{bmatrix}^T
-$$
 
 This specific choice of the state vector allows us to simplify to the maximum extent possible our observation model, since are our measurements correspond exactly to the state vector. This choice is intuitive and easy-to-use for navigation and motion control. The trade-off is that we must convert between wheel velocities ($$v_{left}$$ and $$v_{right}$$) and robot velocities ($$v$$ and $$\omega$$).
 
 We assume a system described by a nonlinear model. This nonlinear state transition function $$f$$ is: 
 
-**State Transition Model**
-
-$$
-\begin{align*}
-x_{\text{next}} &= x + v \cdot \cos(\theta) \cdot \Delta t \\
-y_{\text{next}} &= y + v \cdot \sin(\theta) \cdot \Delta t \\
-\theta_{\text{next}} &= \theta + \omega \cdot \Delta t \\
-v_{\text{next}} &= v \\
-\omega_{\text{next}} &= \omega
-\end{align*}
-$$
-
-Furthermore, the state transition matrix $$F$$ can be found by calculating the Jacobian of the nonlinear state transition model $$f$$ with respect to the state $$x$$. This Jacobian is used for computing the covariance propagation on the predicted state. 
-
-$$
-F = \begin{bmatrix} 
-1 & 0 & -v\sin(\theta)\Delta t & \cos(\theta)\Delta t & 0 \\
-0 & 1 & v\cos(\theta)\Delta t & \sin(\theta)\Delta t & 0 \\
-0 & 0 & 1 & 0 & \Delta t \\
-0 & 0 & 0 & 1 & 0 \\
-0 & 0 & 0 & 0 & 1
-\end{bmatrix}
-$$
-
-The state transition is implemented in the `predict()` function, which will be explicited in the Prediction Step part.
-        
-**Observation Model**
-Our measurement function $$h$$ is:
-
-$$\begin{align*}
-h(x_i) = \begin{bmatrix} 
-x_{\textrm{camera}}\\
-y_{\textrm{camera}}\\ 
-\theta_{\textrm{camera}}\\ 
-v{\textrm{sensor}}\\ 
-\omega{\textrm{sensor}} 
-\end{bmatrix} 
-\end{align*} $$
-
-and the measurement Jacobian $$H$$ is simply the 5x5 identity matrix.
+      
 
 #### Prediction Step
 The prediction step uses the differential drive model to estimate the robot's next state. The wheel velocities serve as control inputs. 
@@ -998,13 +946,14 @@ A similar approach is followed to compute the measurement noise on the angular v
 **Measurement Noise (R)**: Adapts based on camera visibility:
    ```python
    # Camera visible - normal measurement uncertainty
-   R_UNCOVERED = np.diag([0.21232803, 0.21232803,
-                         0.00001523, 32.1189, 122.2820])
+   R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 
+                         35.8960, 154.1675])
    
    # Camera occluded - high position/orientation uncertainty
-   R_COVERED = np.diag([9999999, 9999999, 9999999,
-                        32.1189, 122.2820])
+   R_COVERED = np.diag([9999999, 9999999, 9999999, 
+                       35.8960, 154.1675])
    ```
+ 
 
 Due to the fact that the camera vision can be covered, we define two different measurement noise covariance matrices $$R$$, more precisely $$R_{covered}$$ and $$R_{uncovered}$$. When the camera is covered, and therefore camera measurements aren't available, the measurement noise covariance for position and orientation increases significantly, causing the filter to rely more heavily on wheel odometry. This effectively tells the Kalman filter to ignore any position/orientation measurements during these periods and rely solely on the motion model prediction and odometry measurements. This is a common technique in Kalman filtering when certain sensors become temporarily unavailable - setting their corresponding measurement uncertainties to very high values effectively disables their influence on the state estimate.
 
@@ -1017,17 +966,6 @@ def set_mode(self, covered):
         else:
             self.R = R_UNCOVERED # Measurement from camera
   ```
-<p align="center">
-<img src="img/filtering/covariance/process_variance_linear_speed.png" width="700" alt="odometry error v">
-</p><br>
-<em>Odometry Noise Covariance for linear velocity v</em>
-</p>
-<p align="center">
-<img src="img/filtering/covariance/process_variance_angular_speed.png" width="700" alt="odometry error w">
-</p><br>
-<em>Odometry Noise Covariance for angular velocity w</em>
-</p>
-
 ##### Process Noise Covariance Test
 For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position $$(x, y)$$ and linear velocity $$v$$, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. 
 
@@ -1036,23 +974,9 @@ Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process 
             
  **Process Noise (Q)**: Models uncertainty in the motion model:
    ```python
-   Q = np.diag([27.7276, 27.7276, 0.0554, 0.1026, 0.0002])
+   Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
    ```
    The larger values for position states reflect greater uncertainty in motion prediction.
-
-  <p align="center">
-  <img src="img/filtering/covariance/process_variance_all_rotation.png" width="700" alt="process noise angular">
-  </p><br>
-  <em>Process noise for position (x,y) and linear velocity v</em>
-  </p>
-  
-  <p align="center">
-  <img src="img/filtering/covariance/process_variance_all_translation.png" width="700" alt="process noise linear">
-  </p>
-  <p align="center">
-  <em>Process noise for orientation theta and angular velocity w </em>
-  </p>
-  
    
 #### Key Features
 

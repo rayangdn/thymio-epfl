@@ -2,7 +2,7 @@
 import numpy as np
 
 # Experimentally determined process noise covariance for state variables [x, y, θ, v, ω]
-Q = np.diag([27.7276, 27.7276, 0.0554, 0.1026, 0.0002])
+Q = np.diag([27.7276, 27.7276, 0.0554, 0.1026, 0.01])
 
 # Measurement noise covariance when camera is covered/uncovered
 R_COVERED = np.diag([9999999, 9999999, 9999999, 32.1189, 122.2820])   # High uncertainty in position/orientation
