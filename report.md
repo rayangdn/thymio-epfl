@@ -591,7 +591,10 @@ The obstacle avoidance system features:
    - Base speed of 100 units modified by weighted sensor readings
 
 <p align="center">
-<img src="img/local_nav/ANN_robot_control.png" width="400" alt="local_nav_ann">
+    <img src="img/local_nav/ANN_robot_control.png" width="400" alt="local_nav_ann">
+    <br>
+    <em>Thymio with weighted proximity sensors, taken from the Mobile robotics exercises of week 3. 
+     </em>
 </p>
 
 ### Recovery Behavior
