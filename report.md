@@ -911,6 +911,10 @@ Our EKF implementation provides several important capabilities:
 ✓ Smooth trajectory estimation for control
 
 #### Future Improvements
+- EKF works well with motion models with mild non-linearities, and uncertainties are roughly Gaussian with zero mean. It can fail when systems are highly non-linear or have multi-modal distributions. In such cases, a [Particle Filter](https://en.wikipedia.org/wiki/Particle_filter) assumes the state-space model can be nonlinear and the initial state and noise distributions can take any form required. This allows it to better handle multi-modal distributions and severe non-linearities.
+- Implement adaptive noise covariance matrices (Q and R).Dynamically adjust process and measurement noise based on robot's speed, as higher speeds may need larger process noise
+- Add acceleration states to improve motion prediction
+- To improve our robustness, we may implement outlier detection by implement Chi-square testing for measurement validation, developing adaptive thresholds for measurement acceptance, and including measurement history analysis for anomaly detection.
 
 ## Motion Control
 
