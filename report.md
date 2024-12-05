@@ -1019,12 +1019,15 @@ def set_mode(self, covered):
   ```
 <p align="center">
 <img src="img/filtering/covariance/process_variance_linear_speed.png" width="700" alt="odometry error v">
-</p><br>
-<em>Odometry Noise Covariance for linear velocity v</em>
 </p>
 <p align="center">
+<em>Odometry Noise Covariance for linear velocity v</em>
+</p>
+
+<p align="center">
 <img src="img/filtering/covariance/process_variance_angular_speed.png" width="700" alt="odometry error w">
-</p><br>
+</p>
+<p align="center">
 <em>Odometry Noise Covariance for angular velocity w</em>
 </p>
 
@@ -1042,7 +1045,8 @@ Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process 
 
   <p align="center">
   <img src="img/filtering/covariance/process_variance_all_rotation.png" width="700" alt="process noise angular">
-  </p><br>
+  </p>
+  <p align="center">
   <em>Process noise for position (x,y) and linear velocity v</em>
   </p>
   
