@@ -902,9 +902,6 @@ This project successfully developed an autonomous navigation system for the Thym
 Looking ahead, several key improvements could further enhance the system's capabilities. The vision system could be upgraded to use modern object detection models like YOLOv8 for handling diverse obstacle types, while implementing Visual SLAM would eliminate the need for ArUco markers. The global navigation module could benefit from more efficient path planning algorithms like RRTs or potential fields for complex environments, along with dynamic obstacle handling. The local navigation system could be enhanced with PID control for better performance on challenging surfaces, and upgrading to time-of-flight sensors would enable more proactive obstacle avoidance. Finally, the state estimation could be improved by implementing a particle filter for better handling of non-linear dynamics, along with dynamic noise covariance adjustment based on robot speed. These enhancements would make the system more robust and suitable for real-world applications beyond the controlled environment.
 
 # References
-I'll help add any missing references from the project document. Looking at the content, here's a comprehensive update to the References section that includes additional academic and technical resources mentioned:
-
-# References
 1. MOBOTS Laboratory. EPFL. Available at: https://www.epfl.thymio.org/
 2. OpenCV Documentation:
    - Camera Calibration Guide: https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html
