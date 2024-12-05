@@ -375,18 +375,12 @@ The current vision system could be improve to handle more realistic scenarios by
 
 
 ## Global navigation
-The aim of global navigation is to find a collision-free path from the start position to the goal position. To this end, we must gather a global map of the environment, a start and goal position, a path planning algorithm and a path following module. 
-
-Furthermore, optimality can be defined with respect to different criteria, such as length, execution time, energy consumption and more. In our case, the visibility graph and Djikstra's algorithm allow us to find the shortest path (length) from the start node to the end node, in the context of road-map graphs.
-
-This function is fulfilled by the Global Navigation module. The full code is found in the global_navigation.py file.
 
 The global navigation module employs a visibility graph approach for optimal path planning, enabling the Thymio robot to navigate efficiently around static obstacles. The implementation is based on the [PyVisGraph library](https://github.com/TaipanRex/pyvisgraph) which efficiently constructs visibility graphs from detected polygonal obstacles. This library was chosen for its ease of use. The module interfaces directly with our [vision based](#computer-vision) obstacle detection system to maintain an accurate environmental model.
 
+While path optimality can be measured through various metrics including execution time, energy consumption, and distance traveled, our implementation specifically optimizes for the shortest geometric path between start and goal positions.
 
-1. Image of map, with obstacles, start, end !!!
-
-
+### Path Planning Process
 The path planning process consists of three main components:
 1. Obstacle processing with safety margins
 2. Visibility graph construction
