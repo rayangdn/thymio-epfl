@@ -452,7 +452,7 @@ graph = vg.VisGraph()
 graph.build(polygon_obstacles, status=False)
 ```
 
-The way `build()` creates the graph is by identifying all vertices (including start and goal positions), and then connecting pairs of vertices with edges if the straight line between them doesn't intersect any polygon obstacles.
+PyVisGraph's `build()` function constructs a visibility graph from collections of polygonal obstacles. Each obstacle is defined by an array of vertex coordinates describing its geometric shape. 
 
 ### Path Planning 
 Once the visibility graph is constructed, we compute the shortest path using [Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) implemented in the PyVisGraph's `shortest_path()`function. This approach guarantees finding the shortest geometric path between start and goal. 
