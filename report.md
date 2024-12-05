@@ -586,7 +586,7 @@ The obstacle avoidance system features:
    - Asymmetric weight matrices for left/right motors:
      ```python
      WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]  # Positive weights favor right turn
-     WEIGHT_RIGHT = [-5, -8, -10, 8,  5]   # Positive weights favor left turn
+     WEIGHT_RIGHT = [-5, -8, -12, 8,  5]   # Positive weights favor left turn
      ```
    - Base speed of 100 units modified by weighted sensor readings
 
