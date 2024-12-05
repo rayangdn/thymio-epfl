@@ -680,9 +680,9 @@ The EKF implementation handles this by processing measurements from both sensors
 
 ### Extended Kalman Filter Model
 We are using the following model for extended Kalman filter implementation:
-$$ 
+$$ \begin{align*}
 x_k = f(x_{k-1}, u_{k-1}) + w_{k-1}
-$$
+\end{align*}$$
 
 where $$x_k$$ is the state vector at time $$k$$, $$u_{k-1}$$ is the control input, $$f$$ is the nonlinear state transition function, and $$w_{k-1}$$ is the process noise, assumed Gaussian with zero mean and covariance matrix $$Q_{k-1}$$. 
 
@@ -892,7 +892,7 @@ def set_mode(self, covered):
 For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position $$(x, y)$$ and linear velocity $$v$$, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. 
 
 The $$(x,y,v)$$ process noise covariance test is done in the following manner. We have a selection of target speeds, and for each value we do 5 trials. At each target speed, we set the motor speed to that target, let the robot move for a certain time duration, collect the actual_position of the robot at different timestamps through the camera vision, and analytically compute the expected_position of the robot at different timestamps using the state transition model detailed previously. With these two values, we can compute the process variance on $$(x,y,v)$$. 
-Finally, for the orientation $$\theta$$ and angular velocity $$\w$$ process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
+Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process noise covariance, we perform a similar test. Having a selection of target speeds, running multiple trials at each value, having a timespan during which we use the camera vision to collect actual_angles, and using the state transition model to compute expected_angle, and using the comparison of these two values to compute the process noise covariance on $$\theta$$ and $$\omega$$. 
             
  **Process Noise (Q)**: Models uncertainty in the motion model:
    ```python
