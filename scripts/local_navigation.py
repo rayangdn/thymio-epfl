@@ -23,7 +23,7 @@ OBSTACLES_MAX_ITER = 5 # Number of iterations to perform avoidance after detecti
 OBSTACLES_SPEED = 100  # Base speed during obstacle avoidance
 SCALE_SENSOR = 300    # Scaling factor for sensor readings
 # Sensor weights for left and right motor adjustments
-WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]  # Positive weights favor right turn
+WEIGHT_LEFT = [ 5,  8, -12,  -8, -5]  # Positive weights favor right turn
 WEIGHT_RIGHT = [-5, -8, -10, 8,  5]   # Positive weights favor left turn
 
 class LocalNav():
