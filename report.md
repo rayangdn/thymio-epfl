@@ -125,7 +125,7 @@ Below is a demonstration of our autonomous navigation system in action:
 
 <p align="center">
   <video width="320" height="240" controls>
-    <source src="vids/output.mp4" type="video/mp4">
+    <source src="./vids/demo.mp4" type="video/mp4">
   </video>
 </p>
 
