@@ -380,7 +380,7 @@ The global navigation module employs a visibility graph approach for optimal pat
 
 While path optimality can be measured through various metrics including execution time, energy consumption, and distance traveled, our implementation specifically optimizes for the shortest geometric path between start and goal positions.
 
-### Path Planning Process
+### Path Planning Stategy
 The path planning process consists of three main components:
 1. Obstacle processing with safety margins
 2. Visibility graph construction
@@ -421,8 +421,10 @@ The obstacle extension process:
 <img src="img/global_nav/extended_obstacles.png" width="700" alt="extended obstacles">
 </p>
 
-In conclusion, before handing these obstacles to the Visibility Graph `build()` method, we must perform an a priori expansion of obstacles, taking into account the geometry of the Thymio Robot and the security margin, for our algorithm to be implemented robustly. The `SECURITY_MARGIN` value has been empirically proven to be sufficient to not graze obstacles. This additional step is necessary due to the fact the Visibility Graph makes the assumption of a mass-less, holonomic, pointlike robot.
-The `SECURITY_MARGIN` also accounts for the uncertainty in the robot's position covariance as well as the detection of obstacles (done through camera vision).  
+The `SECURITY_MARGIN` parameter ensures safe navigation by compensating for two key factors:
+
+1. The Visibility Graph's simplified robot model (mass-less, holonomic point)
+2. Real-world uncertainties in robot positioning and obstacle detection via camera vision
 
 ### Visibility Graph
 For the task of graph creation, to capture the connectivity of the free space into a graph that is subsequently searched for paths, we used the road-map approach of Visibility Graphs. We utilize the [Pyvisgraph library](https://github.com/TaipanRex/pyvisgraph), which given a set of simple obstacle polygons, builds a visibility graph. We have chosen Visibility Graphs as they are well documented, well known and provide a complete solution that make it stand out in comparison to other methods such as Voronoi diagrams or adaptive-cell decomposition.
