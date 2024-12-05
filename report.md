@@ -491,8 +491,8 @@ The path computation:
 - Calculates the total path length 
 - Returns a series of waypoints for the robot to follow
 
-p align="center">
-<img src="img/global_nav/trajectory.png" width="700" alt=" trajectory">
+<p align="center">
+<img src="img/global_nav/trajectory.png" width="700" alt="extended obstacles">
 <br>
 <em>Path planning showing obstacles, visibility graph, and shortest path.</em>
 </p>
