@@ -578,7 +578,7 @@ The obstacle avoidance system features:
    - Asymmetric weight matrices for left/right motors:
      ```python
      WEIGHT_LEFT = [ 5,  8, -10,  -8, -5]  # Positive weights favor right turn
-     WEIGHT_RIGHT = [-5, -8, -10, 8,  5]   # Positive weights favor left turn
+     WEIGHT_RIGHT = [-5, -8, -12, 8,  5]   # Positive weights favor left turn
      ```
    - Base speed of 100 units modified by weighted sensor readings
 
@@ -591,7 +591,7 @@ The obstacle avoidance system features:
 
 ### Recovery Behavior
 
-The system implements a recovery mechanism to smoothly transition between obstacle avoidance and path following:
+The system implements a recovery mechanism to transition between obstacle avoidance and path following:
 
 ```python
 if self._detect_obstacles(sensor_data):
@@ -616,7 +616,7 @@ else:
 Key aspects of the recovery behavior:
 
 1. **Persistence**:
-   - Maintains obstacle avoidance for `OBSTACLES_MAX_ITER` iterations
+   - Maintains obstacle avoidance at least for `OBSTACLES_MAX_ITER` iterations
    - Prevents premature switching between behaviors
 
 2. **Path Recomputation**:
@@ -998,14 +998,13 @@ A similar approach is followed to compute the measurement noise on the angular v
 **Measurement Noise (R)**: Adapts based on camera visibility:
    ```python
    # Camera visible - normal measurement uncertainty
-   R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 
-                         35.8960, 154.1675])
+   R_UNCOVERED = np.diag([0.21232803, 0.21232803,
+                         0.00001523, 32.1189, 122.2820])
    
    # Camera occluded - high position/orientation uncertainty
-   R_COVERED = np.diag([9999999, 9999999, 9999999, 
-                       35.8960, 154.1675])
+   R_COVERED = np.diag([9999999, 9999999, 9999999,
+                        32.1189, 122.2820])
    ```
- 
 
 Due to the fact that the camera vision can be covered, we define two different measurement noise covariance matrices $$R$$, more precisely $$R_{covered}$$ and $$R_{uncovered}$$. When the camera is covered, and therefore camera measurements aren't available, the measurement noise covariance for position and orientation increases significantly, causing the filter to rely more heavily on wheel odometry. This effectively tells the Kalman filter to ignore any position/orientation measurements during these periods and rely solely on the motion model prediction and odometry measurements. This is a common technique in Kalman filtering when certain sensors become temporarily unavailable - setting their corresponding measurement uncertainties to very high values effectively disables their influence on the state estimate.
 
@@ -1018,6 +1017,17 @@ def set_mode(self, covered):
         else:
             self.R = R_UNCOVERED # Measurement from camera
   ```
+<p align="center">
+<img src="img/filtering/covariance/process_variance_linear_speed.png" width="700" alt="odometry error v">
+</p><br>
+<em>Odometry Noise Covariance for linear velocity v</em>
+</p>
+<p align="center">
+<img src="img/filtering/covariance/process_variance_angular_speed.png" width="700" alt="odometry error w">
+</p><br>
+<em>Odometry Noise Covariance for angular velocity w</em>
+</p>
+
 ##### Process Noise Covariance Test
 For the process noise covariance matrix $$Q$$, we conduct two tests: one for the process noise on position $$(x, y)$$ and linear velocity $$v$$, and another for the process noise on orientation $$\theta$$ and angular velocity $$\omega$$. Since we have already computed and verified that the camera measurement noise is very low, we will treat the computer vision measurements as equivalent to the ground truth for the purpose of these tests. 
 
@@ -1026,9 +1036,23 @@ Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process 
             
  **Process Noise (Q)**: Models uncertainty in the motion model:
    ```python
-   Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
+   Q = np.diag([27.7276, 27.7276, 0.0554, 0.1026, 0.0002])
    ```
    The larger values for position states reflect greater uncertainty in motion prediction.
+
+  <p align="center">
+  <img src="img/filtering/covariance/process_variance_all_rotation.png" width="700" alt="process noise angular">
+  </p><br>
+  <em>Process noise for position (x,y) and linear velocity v</em>
+  </p>
+  
+  <p align="center">
+  <img src="img/filtering/covariance/process_variance_all_translation.png" width="700" alt="process noise linear">
+  </p>
+  <p align="center">
+  <em>Process noise for orientation theta and angular velocity w </em>
+  </p>
+  
    
 #### Key Features
 
