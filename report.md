@@ -482,7 +482,6 @@ The path computation:
 <img src="img/global_nav/trajectory.png" width="500" alt="extended obstacles">
 </p>
 
-
 Finally, the 'get_trajectory()' function combines everything and handles the visualization.
 
 This navigation algorithm is computationally efficient enough to enable real-time computation, allowing for immediate path recalculation in scenarios like local avoidance or kidnapping.
@@ -514,8 +513,7 @@ The complete implementation pipeline is detailed below:
 
 - The requirements of this project do not allow repositioning of obstacles during the experiment. If this were a requirement, dynamic obstacle handling capability to update paths based on newly detected obstacles from the vision system should be added. 
   
-- The worst-case complexity for constructing the Visibility Graph is at least O(n²log n)(
-  https://github.com/TaipanRex/pyvisgraph/tree/master), where n is the number of vertices. This arises in scenarios where all vertices are mutually visible, requiring visibility checks for every pair of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles, where the number of vertices and potential edges can grow rapidly. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees (RRTs (https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,(https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
+- The worst-case complexity for constructing the Visibility Graph is at least O(n²log n)(https://github.com/TaipanRex/pyvisgraph/tree/master), where n is the number of vertices. This arises in scenarios where all vertices are mutually visible, requiring visibility checks for every pair of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles, where the number of vertices and potential edges can grow rapidly. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees (RRTs (https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,(https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
 
 ## Local Navigation
 
@@ -653,9 +651,10 @@ The local navigation system achieves several important performance metrics:
 
 
 ## Filtering
-The motivation behind filtering is the fact that we seek to represent a world which is perceived with errors, on which we do actions that do not correspond exactly to our orders, and with maps that are uncertain. To this end, we im to improve the estimation of our state X, after having incorporated sensor data. (ref course??)
+The motivation behind filtering is the fact that we seek to represent a world which is perceived with errors, on which we do actions that do not correspond exactly to our orders, and with maps that are uncertain. To this end, we aim to improve the estimation of our state X, after having incorporated sensor data.
 
 The filtering module's core purpose is robust state estimation for robot localization by fusing multiple data sources, both the computer vision positioning data and the wheel odometry obtained from the Thymio. 
+
 Furthermore, it possesses a fallback capability, as it maintains accurate tracking of the robot's pose and velocities using odometry when vision data is unavailable/unreliable, be it because the camera is covered or because the computer vision submodule is malfunctioning. 
 
 It performs the state estimation of the differential-drive robot, tracking robot pose (x, y, θ) and linear and angular velocity (v, w). We employ a simplified discrete time state space model, assuming a sufficiently small timestep. The state transition equations are:
