@@ -123,7 +123,7 @@ Our experimental environment consists of a well-defined workspace measuring 130x
 
 Below is a demonstration of our autonomous navigation system in action:
 
-<center><div><img src = "vids\demo.gif" width = 700></div></center>
+<center><div><img src = "vids\demo.gif" width =1000></div></center>
 
 In this video, you can see:
 - The Thymio robot navigating through our environment
@@ -994,8 +994,7 @@ Finally, for the orientation $$\theta$$ and angular velocity $$\omega$$ process 
 
   <p align="center">
   <img src="img/filtering/covariance/process_variance_all_rotation.png" width="700" alt="process noise angular">
-  </p>
-  <p align="center">
+  </p><br>
   <em>Process noise for position (x,y) and linear velocity v</em>
   </p>
   
