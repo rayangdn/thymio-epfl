@@ -599,7 +599,7 @@ The obstacle avoidance system features:
 
 ### Recovery Behavior
 
-The system implements a recovery mechanism to smoothly transition between obstacle avoidance and path following:
+The system implements a recovery mechanism to transition between obstacle avoidance and path following:
 
 ```python
 if self._detect_obstacles(sensor_data):
