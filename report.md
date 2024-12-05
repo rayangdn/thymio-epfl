@@ -131,6 +131,8 @@ In this video, you can see:
 - Path planning and execution
 - Dynamic obstacle avoidance in action
 - Position tracking with our vision system
+- Kidnapping event and recomputation of global path
+- Blocking of camera vision (by covering ArUco marker of Thymio) and reliance on wheel odometry for EKF
 
 ## Computer Vision
 
