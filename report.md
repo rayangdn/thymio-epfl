@@ -649,6 +649,10 @@ The local navigation system achieves several important performance metrics:
 <img src="img/local_nav/local_nav_map.svg" width="700" alt="local_nav_mindmap">
 </p>
 
+### Future Imporovements
+
+- The environment, in which the Thymio robot is moving, is quite predictable, as in not very slippery and despite the little motor speed corrections we apply in this module. In a more slippery or rough terrain (like running on water or moving on a carpet), it could be a good idea to implement a PID controller instead of the simple P controller that we have here... it would ensure more precise movements and pose estimation.
+- For the obstacle avoidance loop, a possible improvement could be to use better time of flight (TOF) sensors instead of the infrared proximity sensors, that would allow the Thymio robot to detect local obstacles from further away, and thus plan corrections ahead.
 
 ## Filtering
 The motivation behind filtering is the fact that we seek to represent a world which is perceived with errors, on which we do actions that do not correspond exactly to our orders, and with maps that are uncertain. To this end, we aim to improve the estimation of our state X, after having incorporated sensor data.
