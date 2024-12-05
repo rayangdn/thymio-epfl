@@ -2,11 +2,11 @@
 import numpy as np
 
 # Experimentally determined process noise covariance for state variables [x, y, θ, v, ω]
-Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
+Q = np.diag([27.7276, 27.7276, 0.0554, 0.1026, 0.0002])
 
 # Measurement noise covariance when camera is covered/uncovered
-R_COVERED = np.diag([9999999, 9999999, 9999999, 35.8960, 154.1675])   # High uncertainty in position/orientation
-R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 35.8960, 154.1675])  # Normal camera measurements
+R_COVERED = np.diag([9999999, 9999999, 9999999, 32.1189, 122.2820])   # High uncertainty in position/orientation
+R_UNCOVERED = np.diag([0.21232803, 0.21232803, 0.00001523, 32.1189, 122.2820])  # Normal camera measurements
 
 class ExtendedKalmanFilter:
     def __init__(self, dt, wheel_base):

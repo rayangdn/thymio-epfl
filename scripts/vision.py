@@ -76,6 +76,8 @@ class Vision():
         found_corners = False
         
         if ids is not None:
+            # Draw detected markers on the frame
+            cv2.aruco.drawDetectedMarkers(frame, corners, ids)
             # Process each detected marker
             for i in range(len(ids)):
                 marker_id = ids[i][0]
@@ -88,6 +90,17 @@ class Vision():
                 # Check if all 4 corners are detected
                 if np.all(corner_positions):  
                     found_corners = True
+                    # Reorder corners to [0, 2, 3, 1]
+                    ordered_corners = corner_positions[[0, 2, 3, 1]]
+                    
+                    # Convert ordered corners to the format needed by polylines
+                    corners_poly = ordered_corners.reshape((-1, 1, 2))
+                    
+                    # Add the first point at the end to close the rectangle
+                    corners_poly = np.append(corners_poly, [corners_poly[0]], axis=0)
+                    
+                    # Draw the rectangle
+                    cv2.polylines(frame, [corners_poly], isClosed=True, color=(0, 255, 0), thickness=2)
                     
         return frame, corner_positions, found_corners
     

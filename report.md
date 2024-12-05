@@ -137,7 +137,7 @@ In this video, you can see:
 Camera calibration is a crucial step in our computer vision pipeline, as it helps remove lens distortion and provides essential camera parameters. We implemented our calibration process based on this [OpenCV's guide](https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html), using the checkerboard pattern below:
 
 <p align="center">
-<img src="img/vision/calibration/checkerboard.png" width="500" alt="checkerboard">
+<img src="img/vision/calibration/checkerboard.png" width="700" alt="checkerboard">
 </p>
 
 #### Process
@@ -216,7 +216,7 @@ The detection process uses OpenCV's `detectMarkers()` function, which returns th
 A perspective transform is implemented  to convert the camera's angled view into a top-down perspective, which is essential for accurate navigation and obstacle detection. We based our implementation on [OpenCV's geometric transformations](https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html). The map used can be find below:
 
 <p align="center">
-<img src="img/vision/aruco_markers/map.png" width="500" alt="map environment">
+<img src="img/vision/aruco_markers/map.png" width="700" alt="map environment">
 </p>
 
 #### Computing the Transform Matrix
@@ -263,14 +263,16 @@ This transformation allows us to:
 - Obtain accurate measurements for robot navigation
 - Simplify obstacle detection and path planning algorithms
 
-GIVE A PICTURE OF THE PROCESS
+<p align="center">
+<img src="img/vision/obstacles/process.png" width="700" alt="local_nav_ann">
+</p>
 
 ### Obstacle Detection
 
 Our obstacle detection system combines Canny edge detection and contour finding from OpenCV to identify obstacles in the environment. The implementation is based on [OpenCV's Canny Edge Detection](https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html) and [Contour Detection](https://docs.opencv.org/3.4/d4/d73/tutorial_py_contours_begin.html) tutorials. A typical environment with different shape obstacles can be seen below:
 
 <p align="center">
-<img src="img/vision/obstacles/environment.png" width="500" alt="obstacles">
+<img src="img/vision/obstacles/environment.png" width="700" alt="obstacles">
 </p>
 
 #### Processing Pipeline
@@ -299,7 +301,7 @@ edges_frame = cv2.Canny(threshold_frame, 50, 150)
 The parameters 50 and 150 represent the lower and upper thresholds for the hysteresis procedure in Canny edge detection.
 
 <p align="center">
-<img src="img/vision/obstacles/edges_detection.png" width="600" alt="egdes">
+<img src="img/vision/obstacles/edges_detection.png" width="700" alt="egdes">
 </p>
 
 **Contour Detection and Processing**:
@@ -323,7 +325,7 @@ for contour in contours:
 We use `cv2.RETR_EXTERNAL` to only retrieve the outer contours, and `cv2.CHAIN_APPROX_SIMPLE` to compress horizontal, vertical, and diagonal segments and leave only their end points. The `OBSTACLE_MIN_AREA` threshold helps filter out small noise contours.
 
 <p align="center">
-<img src="img/vision/obstacles/contours_detection.png" width="600" alt="contours">
+<img src="img/vision/obstacles/contours_detection.png" width="700" alt="contours">
 </p>
 
 #### Corner Filtering
@@ -417,7 +419,7 @@ The obstacle extension process:
 - Ensures safe clearance during navigation
 
 <p align="center">
-<img src="img/global_nav/extended_obstacles.png" width="500" alt="extended obstacles">
+<img src="img/global_nav/extended_obstacles.png" width="700" alt="extended obstacles">
 </p>
 
 #### Visibility Graph Construction
@@ -467,7 +469,7 @@ The path computation:
 - Returns a series of waypoints for the robot to follow
 
 <p align="center">
-<img src="img/global_nav/trajectory.png" width="500" alt="extended obstacles">
+<img src="img/global_nav/trajectory.png" width="700" alt="extended obstacles">
 </p>
 
 ### Key Features
