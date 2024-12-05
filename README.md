@@ -74,6 +74,3 @@ Note: LaTeX formatting may not render correctly in classic Jupyter Notebook
 
 - The full project report is included in the notebook
 - Code documentation and examples are provided within each section
-
-# KALMAN 
-https://automaticaddison.com/extended-kalman-filter-ekf-with-python-code-example/

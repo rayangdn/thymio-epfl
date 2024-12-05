@@ -644,28 +644,169 @@ The local navigation system achieves several important performance metrics:
 - Upgrading from infrared to time-of-flight (TOF) sensors would enable earlier obstacle detection, allowing more proactive path corrections and smoother navigation.
 
 ## Filtering
-The motivation behind filtering is the fact that we seek to represent a world which is perceived with errors, on which we do actions that do not correspond exactly to our orders, and with maps that are uncertain. To this end, we aim to improve the estimation of our state X, after having incorporated sensor data.
 
-The filtering module's core purpose is robust state estimation for robot localization by fusing multiple data sources, both the computer vision positioning data and the wheel odometry obtained from the Thymio. 
+The localization system implements an Extended Kalman Filter (EKF) to fuse measurements from multiple sensors and provide robust state estimation. The EKF combines wheel odometry data with camera-based position measurements to maintain accurate tracking of the robot's pose and velocities, even when visual measurements are temporarily unavailable.
 
-Furthermore, it possesses a fallback capability, as it maintains accurate tracking of the robot's pose and velocities using odometry when vision data is unavailable/unreliable, be it because the camera is covered or because the computer vision submodule is malfunctioning. 
+We chose the Extended Kalman Filter (EKF) for its balance of robustness and efficiency. While the standard Kalman Filter cannot handle our robot's nonlinear orientation dynamics, the EKF provides suitable nonlinear state estimation with lower computational cost than alternatives like [Particle Filters](https://en.wikipedia.org/wiki/Particle_filter). Our implementation was inspired by Automatic Addison's [Extended Kalman Filter tutorial](https://automaticaddison.com/extended-kalman-filter-ekf-with-python-code-example/).
 
-It performs the state estimation of the differential-drive robot, tracking robot pose (x, y, θ) and linear and angular velocity (v, w). We employ a simplified discrete time state space model, assuming a sufficiently small timestep. The state transition equations are:
 
-$$ \begin{align*} 
-x_{i+1} &= x_i + v_i \cdot \Delta t \cdot \cos(\theta_i) \\ 
-y{i+1} &= y_i + v_i \cdot \Delta t \cdot \cos(\theta_i)\\ 
-\theta{i+1} &= \theta_i + \omega_i \cdot \Delta t \\
-v{i+1} &= v_i \\
-\omega_{i+1} &= \omega_i 
-\end{align*} $$
+### Extended Kalman Filter Model
 
-where $\Delta t$ is the time step between updates.
+#### State Space Representation
+The filter uses a state vector containing position (x, y), orientation (θ), and velocities (v, ω):
 
-We have chosen the Extended Kalman Filter (EKF) model because it's well documented, well known and compared to other methods such as the Particle Filter, it is less computationally expensive.
-The selection of the EKF over the standard Kalman Filter is due to the nonlinearity of the model with respect to the orientation of the robot. The standard Kalman Filter formulation is not sufficient for such cases.
+$$x = \begin{bmatrix} x & y & \theta & v & \omega \end{bmatrix}^T$$
 
-The EKF implementation handles this by processing measurements from both sensors, weighting data based on sensor uncertainty, linearizing the nonlinear motion model around current state estimates, and providing filtered state estimates robust to sensor failures.
+#### System Model
+The general form of the state transition is:
+
+$$x_k = f(x_{k-1}, u_{k-1}) + w_{k-1}, \quad w_{k-1} \sim \mathcal{N}(0, Q_k)$$
+
+where:
+- $x_k$ is the state vector at time k
+- $u_{k-1}$ represents control inputs (motor commands)
+- $w_{k-1}$ is process noise modeling system uncertainties
+- $f$ is the nonlinear state transition function
+
+#### Motion Model
+The differential drive kinematics are described by:
+
+$$\begin{aligned}
+x_{k+1} &= x_k + v_k \cos(\theta_k) \Delta t \\
+y_{k+1} &= y_k + v_k \sin(\theta_k) \Delta t \\
+\theta_{k+1} &= \theta_k + \omega_k \Delta t \\
+v_{k+1} &= v_k \\
+\omega_{k+1} &= \omega_k
+\end{aligned}$$
+
+where $\Delta t$ represents the time step between updates.
+
+#### Prediction Step
+
+The prediction step uses the differential drive model to estimate the robot's next state. The wheel velocities serve as control inputs:
+
+```python
+def predict(self, u):
+    # Extract current state
+    x, y, theta, _, _ = self.state
+    v_l, v_r = u
+    
+    # Compute robot velocities from wheel speeds
+    v = (v_l + v_r) / 2  # Linear velocity
+    omega = (v_l - v_r) / self.wheel_base  # Angular velocity
+    
+    # Predict next state using nonlinear motion model
+    x_next = x + v * np.cos(theta) * self.dt
+    y_next = y + v * np.sin(theta) * self.dt
+    theta_next = theta + omega * self.dt
+    v_next = v
+    omega_next = omega
+```
+
+The Jacobian of the motion model is computed for covariance propagation:
+
+$$
+F = \begin{bmatrix} 
+1 & 0 & -v\sin(\theta)\Delta t & \cos(\theta)\Delta t & 0 \\
+0 & 1 & v\cos(\theta)\Delta t & \sin(\theta)\Delta t & 0 \\
+0 & 0 & 1 & 0 & \Delta t \\
+0 & 0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 0 & 1
+\end{bmatrix}
+$$
+
+#### Update Step
+
+While our system uses an Extended Kalman Filter due to the nonlinear motion model in the prediction step, our measurement model is actually linear. This is because our vision system and wheel encoders directly observe the state variables without any nonlinear transformations:
+
+```python
+def update(self, measurement):
+    # Convert wheel velocities to robot velocities
+    measurement[3], measurement[4] = self._compute_velocity(measurement[3], measurement[4])
+    
+    # Linear measurement model - direct observation of states
+    H = np.eye(self.n)  # Identity matrix because measurements directly correspond to states
+    
+    # Compute Kalman gain and update state
+    S = H @ self.P @ H.T + self.R
+    K = self.P @ H.T @ np.linalg.inv(S)
+    
+    # Calculate measurement residual
+    y = measurement - self.state
+    
+    # Normalize angle difference to [-π, π]
+    y[2] = np.arctan2(np.sin(y[2]), np.cos(y[2]))
+
+    # Update state estimate and covariance
+    self.state = self.state + K @ y
+    self.P = (np.eye(self.n) - K @ H) @ self.P
+```
+
+Our measurement model is linear because:
+1. The vision system directly measures position and orientation (x, y, θ)
+2. The wheel encoders, after conversion via `_compute_velocity()`, directly provide robot velocities (v, ω)
+
+Therefore, our measurement equation simplifies to:
+$$z_k = Hx_k + v_k, \quad v_k \sim \mathcal{N}(0, R_k)$$
+where:
+- $H = I$ 
+- $z_k = [x, y, \theta, v, \omega]^T$ (direct measurements)
+- $x_k = [x, y, \theta, v, \omega]^T$ (state vector)
+- $v_k$ is the measurement noise with covariance $R_k$
+
+The update equations are:
+
+1. **Innovation (Measurement Residual)**:
+   $$y_k = z_k - Hx_{k|k-1}$$
+
+2. **Innovation Covariance**:
+   $$S_k = HP_{k|k-1}H^T + R_k$$
+
+3. **Kalman Gain**:
+   $$K_k = P_{k|k-1}H^TS_k^{-1}$$
+
+4. **State Update**:
+   $$x_{k|k} = x_{k|k-1} + K_ky_k$$
+   $$P_{k|k} = (I - K_kH)P_{k|k-1}$$
+
+This is a special case of the EKF where:
+- The prediction step requires linearization due to nonlinear motion dynamics
+- The update step simplifies to standard Kalman filter equations due to linear measurements
+
+
+This hybrid approach maintains the EKF's ability to handle nonlinear motion while benefiting from the computational simplicity of linear measurements.
+
+#### Noise Covariance Matrices
+
+The filter's performance is tuned through two key noise covariance matrices:
+
+1. **Process Noise (Q)**: Models uncertainty in the motion model:
+   ```python
+   Q = np.diag([79.0045, 79.0045, 0.0554, 0.01, 0.01])
+   ```
+   The larger values for position states reflect greater uncertainty in motion prediction.
+
+2. **Measurement Noise (R)**: Adapts based on camera visibility:
+   ```python
+   # Camera visible - normal measurement uncertainty
+   R_UNCOVERED = np.diag([0.11758080, 0.11758080, 0.00002872, 
+                         35.8960, 154.1675])
+   
+   # Camera occluded - high position/orientation uncertainty
+   R_COVERED = np.diag([9999999, 9999999, 9999999, 
+                       35.8960, 154.1675])
+   ```
+   
+   When the camera is occluded, the measurement noise for position and orientation increases significantly, causing the filter to rely more heavily on wheel odometry.
+
+### Key Features
+
+Our EKF implementation provides several important capabilities:
+
+✓ Fusion of visual and odometric measurements \
+✓ Robust state estimation  \
+✓ Smooth trajectory estimation for control
+
 
 ### Extended Kalman Filter Model
 We are using the following model for extended Kalman filter implementation:
