@@ -127,7 +127,7 @@ Below is a demonstration of our autonomous navigation system in action:
 
 In this video, you can see:
 - The Thymio robot navigating through our environment
-- Real-time path planning and execution
+- Path planning and execution
 - Dynamic obstacle avoidance in action
 - Position tracking with our vision system
 
@@ -493,17 +493,13 @@ The complete implementation pipeline is detailed below:
 <img src="img/global_nav/global_nav_map.svg" width="700" alt="extended obstacles">
 </p>
 
-#### Considerations  
-- Our implementation of global navigation does not account for dynamic obstacles, as we intentionally avoid using camera vision to update obstacles when new ones are detected. This approach is designed to test and challenge the local navigation system, which is capable of reacting to unexpected and unknown obstacles. If the path becomes blocked, we handle recovery by recomputing a new global path, after performing local obstacle avoidance. 
-  
-- The potential issues arising from treating the robot as a point, in terms of robot kinematics and dynamics, are taken care of in the Local Navigation module, where we establish a `MAX_ROTATION_SPEED`, a `MIN_TRANSLATION_SPEED`, a `MAX_TRANSLATION_SPEED` and much more. ???
-
 #### Future Improvements
-- The Visibility Graph does not account for map boundaries. As a result, if an obstacle is close to the map's edge, the graph may generate a path that goes outside the map to reach the goal, even if there isn’t enough space for the robot to pass between the obstacle and the boundary. This occurs because the `shortest_path()` computation imposes no constraints to ensure the path remains within the map's defined area. When attempting to enforce such constraints, we observed that the extended corner of an obstacle near the map boundary may fall outside the map. This causes the entire obstacle to be invalidated and treated as nonexistent, leading the graph to incorrectly assume there is no obstacle and to generate a path that crosses directly over it. This limitation in our implementation highlights an opportunity for improvement, as designing a custom visibility graph algorithm could better handle such edge cases.
 
-- The requirements of this project do not allow repositioning of obstacles during the experiment. If this were a requirement, dynamic obstacle handling capability to update paths based on newly detected obstacles from the vision system should be added.
- 
-- The worst-case complexity is at least O(n²log n) for constructing the [Visibility Graph]([https://github.com/TaipanRex/pyvisgraph](https://github.com/TaipanRex/pyvisgraph/tree/master)), where n is the number of vertices. While this complexity is manageable in static environments with relatively few obstacles, it becomes prohibitively high in dense or highly complex environments with many obstacles. Such situations can lead to significant computational overhead, making the approach impractical for real-time applications. Alternatives like Rapidly-exploring Random Trees ([RRTs](https://theclassytim.medium.com/robotic-path-planning-rrt-and-rrt-212319121378)), Potential Fields, and Grid-based methods (e.g., A*, D*,[Grid-based methods](https://www.sciencedirect.com/science/article/pii/S1474667016327410)) offer more scalable solutions, improving in some cases computational efficiency O(nlog n), each with trade-offs in efficiency and path quality.
+- Implement custom visibility graph that enforces map boundaries, preventing invalid paths when obstacles are near map edges. Current PyVisGraph treats out-of-bounds obstacles as nonexistent, leading to incorrect path generation through obstacles.
+
+- Replace current O(n²log n) visibility graph implementation with more efficient alternatives for dense/complex environments: RRTs (O(nlog n)), potential fields (O(n)), or grid-based methods (O(nlog n)). Each offers different trade-offs between computational efficiency and path quality.
+
+- Add dynamic obstacle handling to update paths based on newly detected obstacles from vision system, making the planner more robust for real-time navigation in changing environments.
 
 ## Local Navigation
 
@@ -631,7 +627,6 @@ The local navigation system achieves several important performance metrics:
 
 ✓ Smooth trajectory following with < 5° orientation error \
 ✓ Reliable obstacle detection and avoidance \
-✓ Stable transition between control modes \
 ✓ Recovery from obstacle encounters with path recomputation
 
 
@@ -639,10 +634,11 @@ The local navigation system achieves several important performance metrics:
 <img src="img/local_nav/local_nav_map.svg" width="700" alt="local_nav_mindmap">
 </p>
 
-### Future Imporovements
+### Future Improvements
 
-- The environment, in which the Thymio robot is moving, is quite predictable, as in not very slippery and despite the little motor speed corrections we apply in this module. In a more slippery or rough terrain (like running on water or moving on a carpet), it could be a good idea to implement a PID controller instead of the simple P controller that we have here... it would ensure more precise movements and pose estimation.
-- For the obstacle avoidance loop, a possible improvement could be to use better time of flight (TOF) sensors instead of the infrared proximity sensors, that would allow the Thymio robot to detect local obstacles from further away, and thus plan corrections ahead.
+- Current P controller is adequate for predictable surfaces, but implementing PID control would improve robustness on challenging terrains (slippery/rough) by providing more precise movement and pose estimation through integral and derivative terms.
+
+- Upgrading from infrared to time-of-flight (TOF) sensors would enable earlier obstacle detection, allowing more proactive path corrections and smoother navigation.
 
 ## Filtering
 The motivation behind filtering is the fact that we seek to represent a world which is perceived with errors, on which we do actions that do not correspond exactly to our orders, and with maps that are uncertain. To this end, we aim to improve the estimation of our state X, after having incorporated sensor data.
