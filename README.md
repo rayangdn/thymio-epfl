@@ -22,6 +22,10 @@ We aims to develop an autonomous navigation system for the Thymio robot that can
 
 Rayan Gauderon, Michel Abela, Ines Altemir Mariñas and David Kejik
 
+
+## Demonstration
+
+
 ## Setup Guide
 
 ### Prerequisites
