@@ -20,7 +20,7 @@ We aims to develop an autonomous navigation system for the Thymio robot that can
 
 ## Team Members
 
-Rayan Gauderon, Michel Abela, Ines Altemir Mariñas and David Kejik
+[Rayan Gauderon](https://github.com/rayangdn), [Michel Abela](https://github.com/Michel-Abela), [Ines Altemir Mariñas](https://github.com/inesaltemir) and [David Kejik](https://github.com/KDCSA)
 
 ## Demonstration
 
